@@ -1450,15 +1450,77 @@ function detectarTareasPendientes() {
   }
 }
 
+// ==================== VALIDACIÓN DE DATOS REALES ====================
+
+/**
+ * Verifica si el sistema tiene datos reales (no solo datos de ejemplo o vacío)
+ * @return {boolean} - true si hay datos reales, false si solo hay ejemplos o está vacío
+ */
+function hayDatosReales() {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const personasSheet = SS.getSheetByName("👥 Personas");
+
+    // Contar filas de datos (sin contar header)
+    const numTareas = tareasSheet.getLastRow() - 1;
+    const numPersonas = personasSheet.getLastRow() - 1;
+
+    // Si hay 4 o menos tareas, probablemente son datos de ejemplo
+    // Los datos de ejemplo iniciales son exactamente 4 filas
+    if (numTareas <= 4 && numPersonas <= 7) {
+      console.log("📝 Sistema tiene solo datos de ejemplo - NO se enviarán correos");
+      return false;
+    }
+
+    // Si las hojas están vacías (solo headers)
+    if (numTareas === 0 || numPersonas === 0) {
+      console.log("📝 Sistema está vacío - NO se enviarán correos");
+      return false;
+    }
+
+    // Verificar si alguna tarea tiene ID que no sea de ejemplo (T001-T004)
+    const datosTareas = tareasSheet.getDataRange().getValues();
+    let tieneIDsReales = false;
+
+    for (let i = 1; i < datosTareas.length; i++) {
+      const tareaID = datosTareas[i][0];
+      if (tareaID && !["T001", "T002", "T003", "T004"].includes(tareaID)) {
+        tieneIDsReales = true;
+        break;
+      }
+    }
+
+    if (!tieneIDsReales && numTareas <= 4) {
+      console.log("📝 Solo hay tareas de ejemplo (T001-T004) - NO se enviarán correos");
+      return false;
+    }
+
+    console.log("✅ Sistema tiene datos reales - Se pueden enviar correos");
+    return true;
+
+  } catch (e) {
+    console.log(`Error verificando datos reales: ${e.message}`);
+    return false; // Por seguridad, no enviar correos si hay error
+  }
+}
+
 function detectarPendientesAutomatico() {
   try {
     console.log("🔍 Ejecutando detección automática de pendientes...");
+
+    // VALIDACIÓN: Solo enviar correos si hay datos reales
+    if (!hayDatosReales()) {
+      console.log("⏭️ Saltando envío de correos - sin datos reales");
+      return;
+    }
 
     const pendientes = detectarTareasPendientes();
 
     if (pendientes.length > 0) {
       console.log(`⚠️ Se encontraron ${pendientes.length} tareas pendientes`);
       notificarPendientes(pendientes);
+    } else {
+      console.log("✅ No hay tareas pendientes");
     }
   } catch (e) {
     console.log(`Error en automatización: ${e.message}`);
@@ -2112,6 +2174,12 @@ function generarReporteDiarioAutomatico() {
   try {
     console.log("📊 Generando reporte diario...");
 
+    // VALIDACIÓN: Solo enviar correos si hay datos reales
+    if (!hayDatosReales()) {
+      console.log("⏭️ Saltando envío de reporte - sin datos reales");
+      return;
+    }
+
     const tareasSheet = SS.getSheetByName("📋 Tareas");
     const personasSheet = SS.getSheetByName("👥 Personas");
     const datos = tareasSheet.getDataRange().getValues();
@@ -2230,6 +2298,12 @@ function verificarEficienciaBaja() {
   try {
     console.log("📊 Verificando eficiencia...");
 
+    // VALIDACIÓN: Solo enviar correos si hay datos reales
+    if (!hayDatosReales()) {
+      console.log("⏭️ Saltando verificación de eficiencia - sin datos reales");
+      return;
+    }
+
     const personasSheet = SS.getSheetByName("👥 Personas");
     const datos = personasSheet.getDataRange().getValues();
 
@@ -2251,6 +2325,8 @@ function verificarEficienciaBaja() {
     if (bajaEficiencia.length > 0) {
       console.log(`⚠️ Se encontraron ${bajaEficiencia.length} personas con eficiencia baja`);
       notificarEficienciaBaja(bajaEficiencia);
+    } else {
+      console.log("✅ Todas las personas tienen eficiencia adecuada");
     }
 
   } catch (e) {
