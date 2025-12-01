@@ -193,33 +193,33 @@ function configurarPersonas() {
   const sheet = SS.getSheetByName("👥 Personas");
   sheet.clearContents();
 
-  const anchos = [50, 130, 100, 120, 140, 180, 110, 140, 100, 200];
+  const anchos = [50, 130, 100, 120, 110, 140, 100, 200];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
-  const encabezados = ["ID", "Nombre", "Turno", "Área", "Teléfono", "Email", "Eficiencia (%)", "Carga", "Estado", "Rol"];
-  sheet.getRange("A1:J1").setValues([encabezados]);
-  sheet.getRange("A1:J1").setBackground("#33b0e0");
-  sheet.getRange("A1:J1").setFontColor("white");
-  sheet.getRange("A1:J1").setFontWeight("bold");
-  sheet.getRange("A1:J1").setBorder(true, true, true, true, true, true);
+  const encabezados = ["ID", "Nombre", "Turno", "Área", "Eficiencia (%)", "Carga", "Estado", "Rol"];
+  sheet.getRange("A1:H1").setValues([encabezados]);
+  sheet.getRange("A1:H1").setBackground("#33b0e0");
+  sheet.getRange("A1:H1").setFontColor("white");
+  sheet.getRange("A1:H1").setFontWeight("bold");
+  sheet.getRange("A1:H1").setBorder(true, true, true, true, true, true);
   sheet.setRowHeight(1, 25);
 
   const datos = [
-    [1, "Juan García", "6am-2pm", "Confección", "+502 7123 4567", "juan@empresa.com", 0.95, "Medio", "Activo", "Operario"],
-    [2, "María López", "6am-2pm", "Serigrafía", "+502 7223 4567", "maria@empresa.com", 0.98, "BAJO ⭐", "Activo", "Operario"],
-    [3, "Carlos Ruiz", "2pm-10pm", "Planchado", "+502 7323 4567", "carlos@empresa.com", 0.85, "ALTO", "Activo", "Operario"],
-    [4, "Ana Martínez", "2pm-10pm", "Empaque", "+502 7423 4567", "ana@empresa.com", 0.88, "Medio", "Activo", "Operario"],
-    [5, "Pedro Sánchez", "10pm-6am", "Confección", "+502 7523 4567", "pedro@empresa.com", 0.92, "BAJO ⭐", "Activo", "Operario"],
-    [6, "Stephany Fuentes", "6am-2pm", "Supervisión", "+502 7623 4567", "stephany@mi-eelo.com", 1.0, "BAJA", "Activo", "Encargada Taller"]
+    [1, "Juan García", "6am-2pm", "Confección", 0.95, "Medio", "Activo", "Operario"],
+    [2, "María López", "6am-2pm", "Serigrafía", 0.98, "BAJO ⭐", "Activo", "Operario"],
+    [3, "Carlos Ruiz", "2pm-10pm", "Planchado", 0.85, "ALTO", "Activo", "Operario"],
+    [4, "Ana Martínez", "2pm-10pm", "Empaque", 0.88, "Medio", "Activo", "Operario"],
+    [5, "Pedro Sánchez", "10pm-6am", "Confección", 0.92, "BAJO ⭐", "Activo", "Operario"],
+    [6, "Stephany Fuentes", "6am-2pm", "Supervisión", 1.0, "BAJA", "Activo", "Encargada Taller"]
   ];
 
-  sheet.getRange("A2:J7").setValues(datos);
-  sheet.getRange("A2:J7").setBorder(true, true, true, true, true, true);
-  sheet.getRange("G2:G7").setNumberFormat("0.0%");
+  sheet.getRange("A2:H7").setValues(datos);
+  sheet.getRange("A2:H7").setBorder(true, true, true, true, true, true);
+  sheet.getRange("E2:E7").setNumberFormat("0.0%");
 
   for (let i = 0; i < datos.length; i++) {
     if (i % 2 === 0) {
-      sheet.getRange(`A${i + 2}:J${i + 2}`).setBackground("#f5f5f5");
+      sheet.getRange(`A${i + 2}:H${i + 2}`).setBackground("#f5f5f5");
     }
   }
 
