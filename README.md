@@ -32,82 +32,59 @@ Sistema completo para gestionar tareas de producción, asignar trabajo, monitore
 - Registro en historial
 - Notificaciones inmediatas
 
-## 📁 Estructura del Proyecto
+## 🚀 INSTALACIÓN RÁPIDA (3 PASOS)
 
-```
-mi-eelo/
-├── Code.gs              # Código principal y configuración
-├── Funciones.gs         # Funciones de asignación y reasignación
-├── Herramientas.gs      # Herramientas de análisis y búsqueda
-├── Reportes.gs          # Generación de reportes y alertas
-├── appsscript.json      # Configuración del proyecto
-└── README.md            # Este archivo
-```
-
-## 🚀 Instalación
-
-### 1. Crear una Nueva Hoja de Cálculo de Google
+### PASO 1: Crear Hoja de Cálculo
 
 1. Ve a [Google Sheets](https://sheets.google.com)
 2. Crea una nueva hoja de cálculo
-3. Nómbrala "Sistema de Producción - MI-EELO"
+3. Nómbrala **"Sistema de Producción - MI-EELO"**
 
-### 2. Abrir el Editor de Apps Script
+### PASO 2: Copiar el Código
 
 1. En la hoja de cálculo, ve a **Extensiones** → **Apps Script**
-2. Esto abrirá el editor de Google Apps Script
+2. **Elimina** todo el código que aparece por defecto
+3. **Copia y pega** TODO el contenido del archivo **`Code-Completo.gs`** (es un solo archivo completo)
+4. Haz clic en el **icono de guardar** (💾)
+5. Ponle nombre al proyecto: **"Sistema Producción MI-EELO"**
 
-### 3. Copiar el Código
+### PASO 3: Configurar y Ejecutar
 
-1. **Elimina** el archivo `Code.gs` que viene por defecto
-2. Crea los siguientes archivos nuevos haciendo clic en el **+** junto a "Archivos":
-
-#### Archivo 1: `Code.gs`
-- Copia todo el contenido del archivo `Code.gs` de este repositorio
-
-#### Archivo 2: `Funciones.gs`
-- Copia todo el contenido del archivo `Funciones.gs` de este repositorio
-
-#### Archivo 3: `Herramientas.gs`
-- Copia todo el contenido del archivo `Herramientas.gs` de este repositorio
-
-#### Archivo 4: `Reportes.gs`
-- Copia todo el contenido del archivo `Reportes.gs` de este repositorio
-
-### 4. Configurar Correos Electrónicos
-
-En el archivo `Code.gs`, actualiza la sección de configuración de correos (líneas 7-13):
+1. **IMPORTANTE**: Actualiza los correos electrónicos en las líneas 7-13:
 
 ```javascript
 const CORREOS_CONFIG = {
-  "Encargada de Taller 1": "stephany@mi-eelo.co",
-  "Encargada de Taller 2": "encargada2@empresa.co",  // ← Cambiar por email real
-  "Gerente de Producción": "adrian@creamosguatemala.org",
-  "Admininstrador Sistema": "adrian@creamosguatemala.org"
+  "Encargada de Taller 1": "stephany@mi-eelo.co",           // ← Ya configurado
+  "Encargada de Taller 2": "CAMBIAR@tupmail.com",           // ← CAMBIAR ESTE
+  "Gerente de Producción": "adrian@creamosguatemala.org",   // ← Ya configurado
+  "Admininstrador Sistema": "adrian@creamosguatemala.org"   // ← Ya configurado
 };
-
-const EMAIL_ADMIN = "adrian@creamosguatemala.org";
 ```
 
-### 5. Guardar y Autorizar
+2. **Guarda** nuevamente (💾)
+3. **Cierra** el editor de Apps Script
+4. **Refresca** la hoja de cálculo (presiona F5)
+5. Espera 10 segundos a que aparezca el menú **"🔄 REASIGNACIONES"**
+6. Haz clic en **🔄 REASIGNACIONES** → **🔧 Setup Completo**
+7. **Autoriza** el script:
+   - Clic en "Revisar permisos"
+   - Selecciona tu cuenta
+   - Clic en "Avanzado"
+   - Clic en "Ir a Sistema Producción MI-EELO (no seguro)"
+   - Clic en "Permitir"
+8. Ejecuta nuevamente **🔄 REASIGNACIONES** → **🔧 Setup Completo**
+9. ¡Listo! Verás el mensaje: **"✅ SISTEMA INSTALADO CORRECTAMENTE"**
 
-1. Haz clic en el **icono de guardar** (💾)
-2. Pon un nombre al proyecto: "Sistema Producción MI-EELO"
-3. Cierra el editor de Apps Script
+## 📁 Archivos del Proyecto
 
-### 6. Ejecutar el Setup
+```
+mi-eelo/
+├── Code-Completo.gs     # ⭐ ARCHIVO ÚNICO CON TODO EL CÓDIGO
+├── appsscript.json      # Configuración del proyecto (opcional)
+└── README.md            # Este archivo
+```
 
-1. **Refresca** la hoja de cálculo (F5 o Ctrl+R)
-2. Aparecerá un nuevo menú **"🔄 REASIGNACIONES"** en la barra superior
-3. Haz clic en **🔄 REASIGNACIONES** → **🔧 Setup Completo**
-4. **Autoriza** el script cuando se te solicite:
-   - Haz clic en "Revisar permisos"
-   - Selecciona tu cuenta de Google
-   - Haz clic en "Avanzado"
-   - Haz clic en "Ir a Sistema Producción MI-EELO (no seguro)"
-   - Haz clic en "Permitir"
-5. Ejecuta nuevamente **🔄 REASIGNACIONES** → **🔧 Setup Completo**
-6. Espera a que aparezca el mensaje: **"✅ SISTEMA INSTALADO CORRECTAMENTE"**
+**NOTA**: Solo necesitas copiar **`Code-Completo.gs`** para que funcione todo el sistema.
 
 ## 📊 Hojas del Sistema
 
@@ -242,18 +219,23 @@ Fecha | Hora | Tipo | Tarea ID | Tipo Evento | De | Para | Detalle | Usuario | E
 ### El menú no aparece
 1. Refresca la página (F5)
 2. Espera 10 segundos
-3. Si no aparece, ejecuta manualmente `onOpen()` desde el editor
+3. Si no aparece, ve al editor de Apps Script
+4. Ejecuta manualmente la función `onOpen` (selecciónala del menú desplegable y presiona ▶️)
 
 ### Error al enviar correos
 1. Verifica que los correos en `CORREOS_CONFIG` sean válidos
 2. Asegúrate de haber autorizado el permiso de Gmail
-3. Revisa los logs en Apps Script: **Ver** → **Registros de ejecución**
+3. Revisa los logs: En Apps Script → **Ver** → **Registros de ejecución**
 
 ### Triggers no funcionan
 1. Ve al editor de Apps Script
-2. Clic en el icono del **reloj** (⏰) en la barra lateral
-3. Verifica que existan los triggers
-4. Si no existen, ejecuta manualmente `crearTriggers()`
+2. Clic en el icono del **reloj** (⏰) en la barra lateral izquierda
+3. Verifica que existan 4 triggers
+4. Si no existen, ejecuta manualmente la función `crearTriggers()`
+
+### Error "Cannot read property..."
+- Asegúrate de haber ejecutado el **Setup Completo** primero
+- Verifica que todas las 11 hojas se crearon correctamente
 
 ## 📞 Soporte
 
@@ -261,27 +243,43 @@ Para soporte técnico, contacta a:
 - **Email**: adrian@creamosguatemala.org
 - **Rol**: Administrador del Sistema
 
-## 📄 Licencia
+## 🎯 Checklist Post-Instalación
 
-Sistema desarrollado para MI-EELO.
+Después de instalar, verifica:
+
+- [ ] ✅ El menú "🔄 REASIGNACIONES" aparece
+- [ ] ✅ Se crearon las 11 hojas correctamente
+- [ ] ✅ Los correos están actualizados
+- [ ] ✅ Puedes asignar una tarea de prueba
+- [ ] ✅ La notificación por correo funciona
+- [ ] ✅ El panel control se actualiza
+- [ ] ✅ El historial registra cambios
+
+## 💡 Próximos Pasos
+
+1. Actualiza los datos en la hoja **"👥 Personas"** con tu equipo real
+2. Prueba asignar tareas a diferentes personas
+3. Prueba la reasignación manual
+4. Verifica que los correos lleguen correctamente
+5. Revisa el panel de control
+6. Capacita a tu equipo en el uso del sistema
+
+## 🚀 ¡Sistema Listo!
+
+**El sistema está 100% funcional y listo para usar inmediatamente.**
+
+Solo necesitas:
+1. Copiar **`Code-Completo.gs`** en Apps Script
+2. Actualizar el email de "Encargada de Taller 2"
+3. Ejecutar el **Setup Completo**
+
+**¡Disfruta de tu sistema de producción automatizado!** 🎉
 
 ---
 
-## 🎯 Próximos Pasos Después de la Instalación
+## 📄 Versión
 
-1. ✅ Verifica que todas las hojas se crearon correctamente
-2. ✅ Actualiza los correos en la configuración
-3. ✅ Revisa los datos de ejemplo en cada hoja
-4. ✅ Modifica los datos de "Personas" con tu equipo real
-5. ✅ Prueba asignar una tarea nueva
-6. ✅ Prueba detectar pendientes
-7. ✅ Prueba reasignar una tarea
-8. ✅ Verifica que lleguen los correos
-9. ✅ Revisa el historial de cambios
-10. ✅ Capacita a tu equipo en el uso del sistema
-
-## 🚀 ¡Listo para Producción!
-
-El sistema está diseñado para uso inmediato. Todas las funcionalidades están activas desde el primer momento.
-
-**¡Disfruta de tu nuevo sistema de producción automatizado!** 🎉
+- **Versión**: 2.0
+- **Fecha**: Diciembre 2025
+- **Desarrollado para**: MI-EELO
+- **Archivo único**: Code-Completo.gs (¡Todo en uno!)
