@@ -2039,14 +2039,18 @@ function eliminarDatosEjemplo() {
 
   // Confirmación 1: Advertencia
   const confirm1 = ui.alert(
-    "⚠️ ELIMINAR DATOS DE EJEMPLO\n\n" +
-    "Esta acción eliminará TODOS los datos de ejemplo:\n\n" +
+    "⚠️ ELIMINAR TODOS LOS DATOS\n\n" +
+    "Esta acción eliminará ABSOLUTAMENTE TODO:\n\n" +
     "• Personas (excepto encabezados)\n" +
-    "• Tareas de ejemplo\n" +
+    "• Tareas\n" +
     "• Registros de tiempos\n" +
     "• Reparaciones\n" +
-    "• Historial completo\n\n" +
-    "El sistema quedará VACÍO y listo para producción.\n\n" +
+    "• Historial completo\n" +
+    "• Reasignaciones\n" +
+    "• Reportes\n" +
+    "• Indicadores\n\n" +
+    "El sistema quedará COMPLETAMENTE VACÍO.\n" +
+    "Todo en CERO para empezar de nuevo.\n\n" +
     "¿Deseas continuar?",
     ui.ButtonSet.YES_NO
   );
@@ -2061,6 +2065,7 @@ function eliminarDatosEjemplo() {
     "🔴 ÚLTIMA CONFIRMACIÓN\n\n" +
     "¿Estás COMPLETAMENTE SEGURO?\n\n" +
     "Esta acción NO se puede deshacer.\n\n" +
+    "TODO el sistema volverá a CERO.\n\n" +
     "Para recuperar los datos de ejemplo tendrás que\n" +
     "ejecutar el Setup Completo nuevamente.",
     ui.ButtonSet.YES_NO
@@ -2072,7 +2077,7 @@ function eliminarDatosEjemplo() {
   }
 
   try {
-    console.log("🗑️ Eliminando datos de ejemplo...");
+    console.log("🗑️ Eliminando TODOS los datos del sistema...");
 
     // 1. Limpiar Personas (dejar solo encabezados)
     const personasSheet = SS.getSheetByName("👥 Personas");
@@ -2114,7 +2119,32 @@ function eliminarDatosEjemplo() {
       console.log("  ✓ Historial limpiado");
     }
 
-    // 6. Actualizar Panel Control a ceros
+    // 6. Limpiar Reasignaciones (dejar solo encabezados)
+    const reasignacionesSheet = SS.getSheetByName("🔄 Reasignaciones");
+    const ultimaFilaReasignaciones = reasignacionesSheet.getLastRow();
+    if (ultimaFilaReasignaciones > 1) {
+      reasignacionesSheet.deleteRows(2, ultimaFilaReasignaciones - 1);
+      console.log("  ✓ Reasignaciones limpiadas");
+    }
+
+    // 7. Limpiar Reportes (dejar solo encabezados)
+    const reportesSheet = SS.getSheetByName("📊 Reportes");
+    const ultimaFilaReportes = reportesSheet.getLastRow();
+    if (ultimaFilaReportes > 1) {
+      reportesSheet.deleteRows(2, ultimaFilaReportes - 1);
+      console.log("  ✓ Reportes limpiados");
+    }
+
+    // 8. Limpiar Indicadores completamente (tabla de indicadores)
+    const indicadoresSheet = SS.getSheetByName("📈 Indicadores");
+    // Limpiar solo los valores, mantener la estructura
+    indicadoresSheet.getRange("B4:B7").setValue(0);  // Columna HOY
+    indicadoresSheet.getRange("C4:C7").setValue(0);  // Columna META
+    indicadoresSheet.getRange("D4:D7").clearContent();  // Columna ESTADO
+    indicadoresSheet.getRange("E4:E7").clearContent();  // Columna VARIACIÓN
+    console.log("  ✓ Indicadores limpiados");
+
+    // 9. Actualizar Panel Control a ceros
     const panelSheet = SS.getSheetByName("🎯 Panel Control");
     panelSheet.getRange("B6").setValue(0);  // Total tareas
     panelSheet.getRange("B7").setValue(0);  // Completadas
@@ -2124,37 +2154,41 @@ function eliminarDatosEjemplo() {
 
     // Limpiar tareas pendientes del panel
     panelSheet.getRange("A14:E20").clearContent();
-    console.log("  ✓ Panel Control actualizado");
+    console.log("  ✓ Panel Control actualizado a ceros");
 
-    // 7. Registrar en Historial que se eliminaron los datos
+    // 10. Registrar en Historial que se eliminaron los datos
     const ahora = new Date();
     historialSheet.getRange(2, 1).setValue(ahora);
     historialSheet.getRange(2, 2).setValue(ahora.toLocaleTimeString("es-MX"));
-    historialSheet.getRange(2, 3).setValue("Sistema Limpiado");
+    historialSheet.getRange(2, 3).setValue("Sistema Limpiado Completamente");
     historialSheet.getRange(2, 4).setValue("-");
-    historialSheet.getRange(2, 5).setValue("Limpieza");
+    historialSheet.getRange(2, 5).setValue("Limpieza Total");
     historialSheet.getRange(2, 6).setValue("-");
     historialSheet.getRange(2, 7).setValue("-");
-    historialSheet.getRange(2, 8).setValue("Datos de ejemplo eliminados");
+    historialSheet.getRange(2, 8).setValue("TODOS los datos eliminados - Sistema en CERO");
     historialSheet.getRange(2, 9).setValue(Session.getActiveUser().getEmail());
-    historialSheet.getRange(2, 10).setValue("✅ Sistema listo");
+    historialSheet.getRange(2, 10).setValue("✅ Listo para datos reales");
 
-    console.log("✅ Datos de ejemplo eliminados correctamente");
+    console.log("✅ TODOS los datos eliminados correctamente");
 
     ui.alert(
-      "✅ DATOS ELIMINADOS CORRECTAMENTE\n\n" +
-      "El sistema ha sido limpiado:\n\n" +
+      "✅ SISTEMA COMPLETAMENTE LIMPIO\n\n" +
+      "TODO ha sido eliminado:\n\n" +
       "✓ Personas: VACÍO\n" +
       "✓ Tareas: VACÍO\n" +
       "✓ Tiempos: VACÍO\n" +
       "✓ Reparaciones: VACÍO\n" +
-      "✓ Historial: Registro de limpieza\n" +
-      "✓ Panel Control: Actualizado a 0\n\n" +
-      "🎯 Sistema listo para producción!\n\n" +
+      "✓ Historial: Solo registro de limpieza\n" +
+      "✓ Reasignaciones: VACÍO\n" +
+      "✓ Reportes: VACÍO\n" +
+      "✓ Indicadores: TODO EN CERO\n" +
+      "✓ Panel Control: TODO EN CERO\n\n" +
+      "🎯 Sistema 100% LIMPIO!\n\n" +
       "Ahora puedes:\n" +
-      "1. Agregar tus personas reales en la hoja '👥 Personas'\n" +
-      "2. Comenzar a asignar tareas desde el menú\n" +
-      "3. El sistema registrará todo desde cero"
+      "1. Agregar tus personas reales en '👥 Personas'\n" +
+      "2. Asignar tareas reales desde el menú\n" +
+      "3. Completar tareas con tiempos reales\n" +
+      "4. El sistema comenzará a calcular todo desde cero"
     );
 
   } catch (e) {
