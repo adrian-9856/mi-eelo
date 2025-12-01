@@ -1,6 +1,7 @@
+// ==================================================================================
 // SISTEMA DE PRODUCCIÓN - MI-EELO
-// Google Apps Script - Versión 2.0
-// CON FUNCIÓN DE ASIGNAR TAREAS
+// Google Apps Script - Versión 2.0 - CÓDIGO COMPLETO
+// ==================================================================================
 
 const SS = SpreadsheetApp.getActiveSpreadsheet();
 
@@ -231,34 +232,34 @@ function configurarTareas() {
   const sheet = SS.getSheetByName("📋 Tareas");
   sheet.clearContents();
 
-  const anchos = [90, 140, 110, 180, 90, 110, 130, 90, 130, 180];
+  const anchos = [90, 140, 110, 180, 90, 110, 130, 130, 180];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
-  const encabezados = ["Tarea ID", "Persona Asignada", "Área", "Descripción", "Cantidad", "Fecha", "Estado", "Prioridad", "Reasignable", "Notas"];
-  sheet.getRange("A1:J1").setValues([encabezados]);
-  sheet.getRange("A1:J1").setBackground("#d9b919");
-  sheet.getRange("A1:J1").setFontWeight("bold");
-  sheet.getRange("A1:J1").setBorder(true, true, true, true, true, true);
+  const encabezados = ["Tarea ID", "Persona Asignada", "Área", "Descripción", "Cantidad", "Fecha", "Estado", "Reasignable", "Notas"];
+  sheet.getRange("A1:I1").setValues([encabezados]);
+  sheet.getRange("A1:I1").setBackground("#d9b919");
+  sheet.getRange("A1:I1").setFontWeight("bold");
+  sheet.getRange("A1:I1").setBorder(true, true, true, true, true, true);
   sheet.setRowHeight(1, 25);
 
   const today = new Date();
   const datos = [
-    ["T001", "Juan García", "Confección", "Confección Camisetas", 1500, today, "En Progreso", "Alta", "NO", "75% completado"],
-    ["T002", "María López", "Serigrafía", "Serigrafía Logo", 1500, today, "Completada", "Alta", "NO", "Finalizado"],
-    ["T003", "Carlos Ruiz", "Planchado", "Planchado de Prendas", 500, today, "🔴 PENDIENTE", "Alta", "SI", "Sin iniciar"],
-    ["T004", "Ana Martínez", "Empaque", "Empaque Final", 500, today, "🔴 PENDIENTE", "Media", "SI", "Requiere reasignación"]
+    ["T001", "Juan García", "Confección", "Confección Camisetas", 1500, today, "En Progreso", "NO", "75% completado"],
+    ["T002", "María López", "Serigrafía", "Serigrafía Logo", 1500, today, "Completada", "NO", "Finalizado"],
+    ["T003", "Carlos Ruiz", "Planchado", "Planchado de Prendas", 500, today, "🔴 PENDIENTE", "SI", "Sin iniciar"],
+    ["T004", "Ana Martínez", "Empaque", "Empaque Final", 500, today, "🔴 PENDIENTE", "SI", "Requiere reasignación"]
   ];
 
-  sheet.getRange("A2:J5").setValues(datos);
-  sheet.getRange("A2:J5").setBorder(true, true, true, true, true, true);
+  sheet.getRange("A2:I5").setValues(datos);
+  sheet.getRange("A2:I5").setBorder(true, true, true, true, true, true);
   sheet.getRange("F2:F5").setNumberFormat("yyyy-mm-dd");
 
   for (let i = 0; i < datos.length; i++) {
     const fila = i + 2;
     if (datos[i][6].includes("PENDIENTE")) {
-      sheet.getRange(`A${fila}:J${fila}`).setBackground("#ffcccc");
+      sheet.getRange(`A${fila}:I${fila}`).setBackground("#ffcccc");
     } else if (i % 2 === 0) {
-      sheet.getRange(`A${fila}:J${fila}`).setBackground("#f9f9f9");
+      sheet.getRange(`A${fila}:I${fila}`).setBackground("#f9f9f9");
     }
   }
 
@@ -644,7 +645,13 @@ function crearTriggers() {
       .everyMinutes(30)
       .create();
 
-    console.log("  ✓ Triggers creados");
+    ScriptApp.newTrigger("actualizarTodasEficiencias")
+      .timeBased()
+      .atHour(17)
+      .everyDays(1)
+      .create();
+
+    console.log("  ✓ Triggers creados (incluye actualización diaria de eficiencias)");
   } catch (e) {
     console.log(`  ⚠️ Error triggers: ${e.message}`);
   }
@@ -657,6 +664,8 @@ function onOpen() {
 
   ui.createMenu("🔄 REASIGNACIONES")
     .addItem("➕ Asignar Nueva Tarea", "btnAsignarTarea")
+    .addItem("✅ Completar Tarea", "btnCompletarTarea")
+    .addSeparator()
     .addItem("🔍 Detectar Pendientes", "btnDetectarTodosPendientes")
     .addItem("🔄 Reasignar Manual", "btnReasignarSeleccionada")
     .addItem("⚡ Reasignación Automática", "btnReasignacionAutomatica")
@@ -665,6 +674,7 @@ function onOpen() {
     .addItem("📊 Actualizar Panel Control", "actualizarPanelControlUI")
     .addSeparator()
     .addItem("🔧 Setup Completo", "setupSistemaCompleto")
+    .addItem("🗑️ Eliminar Datos de Ejemplo", "eliminarDatosEjemplo")
     .addToUi();
 
   ui.createMenu("⚙️ HERRAMIENTAS")
@@ -674,6 +684,1639 @@ function onOpen() {
     .addItem("👥 Análisis de Cargas", "analizarCargas")
     .addItem("📈 Ver Eficiencia", "verEficiencia")
     .addSeparator()
+    .addItem("📊 Actualizar Todas las Eficiencias", "btnActualizarTodasEficiencias")
+    .addSeparator()
     .addItem("ℹ️ Ayuda", "mostrarAyuda")
     .addToUi();
+}
+
+// ==================== FUNCIÓN: ASIGNAR NUEVA TAREA ====================
+
+function btnAsignarTarea() {
+  mostrarFormularioAsignacion();
+}
+
+function mostrarFormularioAsignacion() {
+  const html = HtmlService.createHtmlOutput(getFormularioHTML())
+    .setWidth(500)
+    .setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, '➕ ASIGNAR NUEVA TAREA');
+}
+
+function getFormularioHTML() {
+  // Obtener personas desde la hoja
+  const personasSheet = SS.getSheetByName("👥 Personas");
+  const personasData = personasSheet.getDataRange().getValues();
+
+  let opcionesPersonas = '';
+  for (let i = 1; i < personasData.length; i++) {
+    const nombre = personasData[i][1];
+    const carga = personasData[i][5];
+    if (nombre) {
+      opcionesPersonas += `<option value="${nombre}">${nombre} - ${carga}</option>`;
+    }
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .form-group {
+            margin-bottom: 20px;
+          }
+          label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1f4d7f;
+          }
+          input[type="text"],
+          input[type="number"],
+          select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+          }
+          select {
+            cursor: pointer;
+            background-color: white;
+          }
+          input:focus,
+          select:focus {
+            border-color: #1f4d7f;
+            outline: none;
+          }
+          .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+          .btn-primary {
+            background-color: #1f4d7f;
+            color: white;
+          }
+          .btn-primary:hover {
+            background-color: #163a5f;
+          }
+          .btn-secondary {
+            background-color: #ccc;
+            color: #333;
+          }
+          .btn-secondary:hover {
+            background-color: #999;
+          }
+          .buttons {
+            margin-top: 30px;
+            text-align: center;
+          }
+          .titulo {
+            color: #1f4d7f;
+            margin-bottom: 20px;
+            font-size: 20px;
+          }
+          .required {
+            color: red;
+          }
+        </style>
+      </head>
+      <body>
+        <h2 class="titulo">📋 Nueva Tarea de Producción</h2>
+
+        <form id="formulario">
+          <div class="form-group">
+            <label for="operacion">Nombre de la Operación <span class="required">*</span></label>
+            <input type="text" id="operacion" name="operacion" placeholder="Ej: Confección Camisetas" required>
+          </div>
+
+          <div class="form-group">
+            <label for="area">Área <span class="required">*</span></label>
+            <select id="area" name="area" required>
+              <option value="">-- Selecciona un área --</option>
+              <option value="Confección">Confección</option>
+              <option value="Serigrafía">Serigrafía</option>
+              <option value="Planchado">Planchado</option>
+              <option value="Empaque">Empaque</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="persona">Asignar a <span class="required">*</span></label>
+            <select id="persona" name="persona" required>
+              <option value="">-- Selecciona una persona --</option>
+              ${opcionesPersonas}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="cantidad">Cantidad <span class="required">*</span></label>
+            <input type="number" id="cantidad" name="cantidad" placeholder="Ej: 1000" min="1" required>
+          </div>
+
+          <div class="buttons">
+            <button type="submit" class="btn btn-primary">✅ Asignar Tarea</button>
+            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">❌ Cancelar</button>
+          </div>
+        </form>
+
+        <script>
+          document.getElementById('formulario').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const operacion = document.getElementById('operacion').value.trim();
+            const area = document.getElementById('area').value;
+            const persona = document.getElementById('persona').value;
+            const cantidad = parseInt(document.getElementById('cantidad').value);
+
+            if (!operacion || !area || !persona || !cantidad) {
+              alert('❌ Por favor completa todos los campos');
+              return;
+            }
+
+            // Deshabilitar botón para evitar doble envío
+            document.querySelector('.btn-primary').disabled = true;
+            document.querySelector('.btn-primary').textContent = '⏳ Asignando...';
+
+            // Enviar datos a Google Apps Script
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ TAREA ASIGNADA CORRECTAMENTE\\n\\n' +
+                      'Operación: ' + operacion + '\\n' +
+                      'Área: ' + area + '\\n' +
+                      'Persona: ' + persona + '\\n' +
+                      'Cantidad: ' + cantidad);
+                google.script.host.close();
+              })
+              .withFailureHandler(function(error) {
+                alert('❌ Error: ' + error);
+                document.querySelector('.btn-primary').disabled = false;
+                document.querySelector('.btn-primary').textContent = '✅ Asignar Tarea';
+              })
+              .procesarNuevaTarea(operacion, cantidad, area, persona);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function procesarNuevaTarea(operacion, cantidad, area, persona) {
+  crearNuevaTarea(operacion, cantidad, area, persona);
+}
+
+function crearNuevaTarea(descripcion, cantidad, area, persona) {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const historialSheet = SS.getSheetByName("📝 Historial");
+
+    // Generar ID de tarea
+    const ultimaFila = tareasSheet.getLastRow();
+    const tareaID = `T${String(ultimaFila).padStart(3, "0")}`;
+
+    // Agregar tarea
+    const nuevaFila = ultimaFila + 1;
+    const today = new Date();
+
+    tareasSheet.getRange(nuevaFila, 1).setValue(tareaID);
+    tareasSheet.getRange(nuevaFila, 2).setValue(persona);
+    tareasSheet.getRange(nuevaFila, 3).setValue(area);
+    tareasSheet.getRange(nuevaFila, 4).setValue(descripcion);
+    tareasSheet.getRange(nuevaFila, 5).setValue(cantidad);
+    tareasSheet.getRange(nuevaFila, 6).setValue(today);
+    tareasSheet.getRange(nuevaFila, 7).setValue("En Progreso");
+    tareasSheet.getRange(nuevaFila, 8).setValue("SI");
+    tareasSheet.getRange(nuevaFila, 9).setValue("Tarea nueva asignada");
+
+    // Registrar en Historial
+    const ultimaFilaHistorial = historialSheet.getLastRow() + 1;
+    const ahora = new Date();
+
+    historialSheet.getRange(ultimaFilaHistorial, 1).setValue(ahora);
+    historialSheet.getRange(ultimaFilaHistorial, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(ultimaFilaHistorial, 3).setValue("Nueva Tarea");
+    historialSheet.getRange(ultimaFilaHistorial, 4).setValue(tareaID);
+    historialSheet.getRange(ultimaFilaHistorial, 5).setValue("Asignación");
+    historialSheet.getRange(ultimaFilaHistorial, 6).setValue("-");
+    historialSheet.getRange(ultimaFilaHistorial, 7).setValue(persona);
+    historialSheet.getRange(ultimaFilaHistorial, 8).setValue(descripcion);
+    historialSheet.getRange(ultimaFilaHistorial, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(ultimaFilaHistorial, 10).setValue("✅ Asignada");
+
+    // Enviar notificación
+    const asunto = `✅ Nueva Tarea Asignada: ${tareaID}`;
+    const cuerpo = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #1f4d7f;">✅ NUEVA TAREA ASIGNADA</h2>
+
+        <p><strong>Tarea ID:</strong> ${tareaID}</p>
+        <p><strong>Persona:</strong> ${persona}</p>
+        <p><strong>Descripción:</strong> ${descripcion}</p>
+        <p><strong>Cantidad:</strong> ${cantidad}</p>
+        <p><strong>Área:</strong> ${area}</p>
+
+        <p style="margin-top: 20px; color: #666;">
+          <strong>Hora:</strong> ${ahora.toLocaleString("es-MX")}<br>
+          <strong>Sistema:</strong> Producción Automático - Control de Tiempos
+        </p>
+      </body>
+    </html>
+    `;
+
+    try {
+      GmailApp.sendEmail(CORREOS_CONFIG["Gerente de Producción"], asunto, cuerpo, { htmlBody: cuerpo });
+      console.log("  ✓ Notificación de nueva tarea enviada");
+    } catch (e) {
+      console.log(`  ⚠️ Error enviando notificación: ${e.message}`);
+    }
+
+    actualizarPanelControl();
+
+  } catch (e) {
+    console.log(`Error creando tarea: ${e.message}`);
+  }
+}
+
+// ==================== FUNCIÓN: COMPLETAR TAREA ====================
+
+function btnCompletarTarea() {
+  mostrarFormularioCompletar();
+}
+
+function mostrarFormularioCompletar() {
+  const html = HtmlService.createHtmlOutput(getFormularioCompletarHTML())
+    .setWidth(500)
+    .setHeight(500);
+  SpreadsheetApp.getUi().showModalDialog(html, '✅ COMPLETAR TAREA');
+}
+
+function getFormularioCompletarHTML() {
+  // Obtener tareas en progreso desde la hoja
+  const tareasSheet = SS.getSheetByName("📋 Tareas");
+  const tareasData = tareasSheet.getDataRange().getValues();
+
+  let opcionesTareas = '';
+  for (let i = 1; i < tareasData.length; i++) {
+    const tareaID = tareasData[i][0];
+    const persona = tareasData[i][1];
+    const descripcion = tareasData[i][3];
+    const estado = tareasData[i][6];
+
+    if (tareaID && estado === "En Progreso") {
+      opcionesTareas += `<option value="${tareaID}|${persona}">${tareaID} - ${persona} - ${descripcion}</option>`;
+    }
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .form-group {
+            margin-bottom: 20px;
+          }
+          label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1f4d7f;
+          }
+          input[type="number"],
+          select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+          }
+          select {
+            cursor: pointer;
+            background-color: white;
+          }
+          input:focus,
+          select:focus {
+            border-color: #1f4d7f;
+            outline: none;
+          }
+          .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+          .btn-primary {
+            background-color: #33aa33;
+            color: white;
+          }
+          .btn-primary:hover {
+            background-color: #2d8f2d;
+          }
+          .btn-secondary {
+            background-color: #ccc;
+            color: #333;
+          }
+          .btn-secondary:hover {
+            background-color: #999;
+          }
+          .buttons {
+            margin-top: 30px;
+            text-align: center;
+          }
+          .titulo {
+            color: #1f4d7f;
+            margin-bottom: 20px;
+            font-size: 20px;
+          }
+          .required {
+            color: red;
+          }
+          .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #1f4d7f;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h2 class="titulo">✅ Completar Tarea</h2>
+
+        <div class="info-box">
+          📊 Al completar una tarea, se actualizará automáticamente la eficiencia del operario
+        </div>
+
+        <form id="formulario">
+          <div class="form-group">
+            <label for="tarea">Tarea a Completar <span class="required">*</span></label>
+            <select id="tarea" name="tarea" required>
+              <option value="">-- Selecciona una tarea --</option>
+              ${opcionesTareas}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="minutos">Tiempo Real (en minutos) <span class="required">*</span></label>
+            <input type="number" id="minutos" name="minutos" placeholder="Ej: 45" min="1" required>
+          </div>
+
+          <div class="buttons">
+            <button type="submit" class="btn btn-primary">✅ Marcar como Completada</button>
+            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">❌ Cancelar</button>
+          </div>
+        </form>
+
+        <script>
+          document.getElementById('formulario').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const tareaData = document.getElementById('tarea').value;
+            const minutos = parseInt(document.getElementById('minutos').value);
+
+            if (!tareaData || !minutos) {
+              alert('❌ Por favor completa todos los campos');
+              return;
+            }
+
+            // Separar tareaID y persona
+            const [tareaID, persona] = tareaData.split('|');
+
+            // Deshabilitar botón para evitar doble envío
+            document.querySelector('.btn-primary').disabled = true;
+            document.querySelector('.btn-primary').textContent = '⏳ Completando...';
+
+            // Enviar datos a Google Apps Script
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ TAREA COMPLETADA CORRECTAMENTE\\n\\n' +
+                      'Tarea: ' + tareaID + '\\n' +
+                      'Persona: ' + persona + '\\n' +
+                      'Tiempo Real: ' + minutos + ' minutos\\n\\n' +
+                      '📊 La eficiencia ha sido actualizada automáticamente');
+                google.script.host.close();
+              })
+              .withFailureHandler(function(error) {
+                alert('❌ Error: ' + error);
+                document.querySelector('.btn-primary').disabled = false;
+                document.querySelector('.btn-primary').textContent = '✅ Marcar como Completada';
+              })
+              .procesarTareaCompletada(tareaID, persona, minutos);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function procesarTareaCompletada(tareaID, persona, minutos) {
+  marcarTareaCompletada(tareaID, persona, minutos);
+}
+
+function btnActualizarTodasEficiencias() {
+  const ui = SpreadsheetApp.getUi();
+  const respuesta = ui.alert(
+    '📊 ACTUALIZAR EFICIENCIAS',
+    '¿Deseas recalcular las eficiencias de todas las personas basándose en sus tareas completadas?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (respuesta === ui.Button.YES) {
+    actualizarTodasEficiencias();
+    ui.alert('✅ EFICIENCIAS ACTUALIZADAS\n\nSe han recalculado las eficiencias de todas las personas basándose en su desempeño real.');
+  }
+}
+
+// ==================== SISTEMA DE EFICIENCIA AUTOMÁTICA ====================
+
+/**
+ * Calcula la eficiencia de una persona basándose en su desempeño real
+ * @param {string} nombrePersona - Nombre de la persona
+ * @return {number} - Eficiencia en porcentaje (0-100)
+ */
+function calcularEficienciaPersona(nombrePersona) {
+  try {
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const reparacionesSheet = SS.getSheetByName("🔧 Reparaciones");
+
+    // Obtener todas las tareas completadas de esta persona
+    const datosTiempos = tiemposSheet.getDataRange().getValues();
+    const tareasPersona = [];
+
+    for (let i = 1; i < datosTiempos.length; i++) {
+      const persona = datosTiempos[i][1];
+      const estado = datosTiempos[i][7];
+
+      if (persona === nombrePersona && estado === "✅") {
+        tareasPersona.push({
+          tareaID: datosTiempos[i][0],
+          tiempoReal: datosTiempos[i][4],
+          tiempoEstimado: datosTiempos[i][5],
+          variacion: datosTiempos[i][6]
+        });
+      }
+    }
+
+    // Si no tiene tareas completadas, retornar eficiencia inicial
+    if (tareasPersona.length === 0) {
+      return 85.0;
+    }
+
+    // Limitar a las últimas 10 tareas para el cálculo
+    const tareasRecientes = tareasPersona.slice(-10);
+
+    // Calcular eficiencia basada en tiempos
+    let sumaEficienciaTiempo = 0;
+    let tareasValidas = 0;
+
+    tareasRecientes.forEach(tarea => {
+      const real = parsearMinutos(tarea.tiempoReal);
+      const estimado = parsearMinutos(tarea.tiempoEstimado);
+
+      if (real > 0 && estimado > 0) {
+        // Eficiencia = (Tiempo Estimado / Tiempo Real) * 100
+        // Si termina antes: eficiencia > 100, se limita a 100
+        // Si termina después: eficiencia < 100
+        let eficienciaTarea = (estimado / real) * 100;
+
+        // Limitar a 100% como máximo
+        if (eficienciaTarea > 100) eficienciaTarea = 100;
+
+        sumaEficienciaTiempo += eficienciaTarea;
+        tareasValidas++;
+      }
+    });
+
+    // Calcular promedio de eficiencia de tiempo (70% del peso)
+    const eficienciaTiempo = tareasValidas > 0 ? (sumaEficienciaTiempo / tareasValidas) : 85;
+
+    // Calcular penalización por reparaciones (30% del peso)
+    const datosReparaciones = reparacionesSheet.getDataRange().getValues();
+    let reparacionesPersona = 0;
+
+    for (let i = 1; i < datosReparaciones.length; i++) {
+      const persona = datosReparaciones[i][3];
+      if (persona === nombrePersona) {
+        reparacionesPersona++;
+      }
+    }
+
+    // Calcular factor de calidad (sin reparaciones = 100%, cada reparación reduce 10%)
+    const factorCalidad = Math.max(0, 100 - (reparacionesPersona * 10));
+
+    // Eficiencia final: 70% tiempo + 30% calidad
+    const eficienciaFinal = (eficienciaTiempo * 0.7) + (factorCalidad * 0.3);
+
+    // Redondear a 2 decimales y limitar entre 0 y 100
+    return Math.max(0, Math.min(100, Math.round(eficienciaFinal * 100) / 100));
+
+  } catch (e) {
+    console.log(`Error calculando eficiencia para ${nombrePersona}: ${e.message}`);
+    return 85.0; // Retornar eficiencia por defecto en caso de error
+  }
+}
+
+/**
+ * Convierte una cadena de tiempo a minutos
+ * @param {string} tiempo - Tiempo en formato "XX min" o "X h YY min"
+ * @return {number} - Minutos totales
+ */
+function parsearMinutos(tiempo) {
+  if (!tiempo || tiempo === "-") return 0;
+
+  try {
+    let minutos = 0;
+    const tiempoStr = tiempo.toString().toLowerCase();
+
+    // Buscar horas
+    const horasMatch = tiempoStr.match(/(\d+)\s*h/);
+    if (horasMatch) {
+      minutos += parseInt(horasMatch[1]) * 60;
+    }
+
+    // Buscar minutos
+    const minutosMatch = tiempoStr.match(/(\d+)\s*min/);
+    if (minutosMatch) {
+      minutos += parseInt(minutosMatch[1]);
+    }
+
+    return minutos;
+  } catch (e) {
+    console.log(`Error parseando tiempo: ${tiempo}`);
+    return 0;
+  }
+}
+
+/**
+ * Actualiza la eficiencia de una persona específica en la hoja Personas
+ * @param {string} nombrePersona - Nombre de la persona
+ */
+function actualizarEficienciaPersona(nombrePersona) {
+  try {
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = personasSheet.getDataRange().getValues();
+
+    // Buscar la fila de la persona
+    for (let i = 1; i < datos.length; i++) {
+      const nombre = datos[i][1]; // Columna B (Nombre)
+
+      if (nombre === nombrePersona) {
+        const eficiencia = calcularEficienciaPersona(nombrePersona);
+        personasSheet.getRange(i + 1, 5).setValue(eficiencia); // Columna E (Eficiencia)
+        console.log(`  ✓ Eficiencia actualizada para ${nombrePersona}: ${eficiencia}%`);
+        return;
+      }
+    }
+  } catch (e) {
+    console.log(`Error actualizando eficiencia de ${nombrePersona}: ${e.message}`);
+  }
+}
+
+/**
+ * Actualiza las eficiencias de todas las personas
+ */
+function actualizarTodasEficiencias() {
+  try {
+    console.log("📊 Actualizando eficiencias de todas las personas...");
+
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = personasSheet.getDataRange().getValues();
+
+    let actualizadas = 0;
+
+    for (let i = 1; i < datos.length; i++) {
+      const nombre = datos[i][1]; // Columna B (Nombre)
+
+      if (nombre && nombre !== "") {
+        const eficiencia = calcularEficienciaPersona(nombre);
+        personasSheet.getRange(i + 1, 5).setValue(eficiencia); // Columna E (Eficiencia)
+        actualizadas++;
+      }
+    }
+
+    console.log(`✅ ${actualizadas} eficiencias actualizadas`);
+
+  } catch (e) {
+    console.log(`Error actualizando todas las eficiencias: ${e.message}`);
+  }
+}
+
+/**
+ * Marca una tarea como completada y registra el tiempo real
+ * @param {string} tareaID - ID de la tarea
+ * @param {string} nombrePersona - Nombre de la persona
+ * @param {number} minutosReales - Tiempo real en minutos
+ */
+function marcarTareaCompletada(tareaID, nombrePersona, minutosReales) {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const historialSheet = SS.getSheetByName("📝 Historial");
+
+    // 1. Buscar la tarea en la hoja Tareas
+    const datosTareas = tareasSheet.getDataRange().getValues();
+    let filaTarea = -1;
+    let datosTarea = null;
+
+    for (let i = 1; i < datosTareas.length; i++) {
+      if (datosTareas[i][0] === tareaID) {
+        filaTarea = i + 1;
+        datosTarea = datosTareas[i];
+        break;
+      }
+    }
+
+    if (filaTarea === -1) {
+      throw new Error(`Tarea ${tareaID} no encontrada`);
+    }
+
+    // 2. Actualizar estado en hoja Tareas
+    tareasSheet.getRange(filaTarea, 7).setValue("Completada");
+    tareasSheet.getRange(filaTarea, 9).setValue(`Completada en ${minutosReales} minutos`);
+
+    // 3. Buscar el registro de tiempo correspondiente
+    const datosTiempos = tiemposSheet.getDataRange().getValues();
+    let filaTiempo = -1;
+
+    for (let i = 1; i < datosTiempos.length; i++) {
+      if (datosTiempos[i][0] === tareaID && datosTiempos[i][1] === nombrePersona) {
+        filaTiempo = i + 1;
+        break;
+      }
+    }
+
+    if (filaTiempo === -1) {
+      // Si no existe registro de tiempo, crear uno nuevo
+      filaTiempo = tiemposSheet.getLastRow() + 1;
+      tiemposSheet.getRange(filaTiempo, 1).setValue(tareaID);
+      tiemposSheet.getRange(filaTiempo, 2).setValue(nombrePersona);
+      tiemposSheet.getRange(filaTiempo, 6).setValue("60 min"); // Tiempo estimado por defecto
+    }
+
+    // 4. Actualizar tiempos
+    const ahora = new Date();
+    const horaInicio = tiemposSheet.getRange(filaTiempo, 3).getValue() || ahora.toLocaleTimeString("es-MX");
+
+    tiemposSheet.getRange(filaTiempo, 3).setValue(horaInicio);
+    tiemposSheet.getRange(filaTiempo, 4).setValue(ahora.toLocaleTimeString("es-MX"));
+    tiemposSheet.getRange(filaTiempo, 5).setValue(`${minutosReales} min`);
+
+    // Obtener tiempo estimado
+    const tiempoEstimadoStr = tiemposSheet.getRange(filaTiempo, 6).getValue() || "60 min";
+    const tiempoEstimado = parsearMinutos(tiempoEstimadoStr);
+
+    // Calcular variación
+    const variacion = minutosReales - tiempoEstimado;
+    const variacionStr = variacion > 0 ? `+${variacion} min` : `${variacion} min`;
+
+    tiemposSheet.getRange(filaTiempo, 7).setValue(variacionStr);
+    tiemposSheet.getRange(filaTiempo, 8).setValue("✅");
+
+    // 5. Registrar en historial
+    const ultimaFilaHistorial = historialSheet.getLastRow() + 1;
+
+    historialSheet.getRange(ultimaFilaHistorial, 1).setValue(ahora);
+    historialSheet.getRange(ultimaFilaHistorial, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(ultimaFilaHistorial, 3).setValue("Tarea Completada");
+    historialSheet.getRange(ultimaFilaHistorial, 4).setValue(tareaID);
+    historialSheet.getRange(ultimaFilaHistorial, 5).setValue("Completada");
+    historialSheet.getRange(ultimaFilaHistorial, 6).setValue(nombrePersona);
+    historialSheet.getRange(ultimaFilaHistorial, 7).setValue(nombrePersona);
+    historialSheet.getRange(ultimaFilaHistorial, 8).setValue(datosTarea[2]); // Área
+    historialSheet.getRange(ultimaFilaHistorial, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(ultimaFilaHistorial, 10).setValue("✅");
+
+    // 6. Actualizar eficiencia de la persona
+    actualizarEficienciaPersona(nombrePersona);
+
+    // 7. Actualizar panel de control
+    actualizarPanelControl();
+
+    console.log(`✅ Tarea ${tareaID} completada por ${nombrePersona} en ${minutosReales} minutos`);
+
+  } catch (e) {
+    console.log(`Error marcando tarea completada: ${e.message}`);
+    throw e;
+  }
+}
+
+// ==================== AUTOMATIZACIÓN: DETECTAR PENDIENTES ====================
+
+function detectarTareasPendientes() {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const datos = tareasSheet.getDataRange().getValues();
+    const pendientes = [];
+
+    for (let i = 1; i < datos.length; i++) {
+      const estado = datos[i][6];
+      if (estado && estado.includes("PENDIENTE")) {
+        pendientes.push({
+          fila: i + 1,
+          tareaID: datos[i][0],
+          persona: datos[i][1],
+          descripcion: datos[i][3],
+          area: datos[i][2],
+          cantidad: datos[i][4],
+          estado: estado
+        });
+      }
+    }
+
+    return pendientes;
+  } catch (e) {
+    console.log(`Error detectando pendientes: ${e.message}`);
+    return [];
+  }
+}
+
+function detectarPendientesAutomatico() {
+  try {
+    console.log("🔍 Ejecutando detección automática de pendientes...");
+
+    const pendientes = detectarTareasPendientes();
+
+    if (pendientes.length > 0) {
+      console.log(`⚠️ Se encontraron ${pendientes.length} tareas pendientes`);
+      notificarPendientes(pendientes);
+    }
+  } catch (e) {
+    console.log(`Error en automatización: ${e.message}`);
+  }
+}
+
+// ==================== AUTOMATIZACIÓN: NOTIFICACIONES POR CORREO ====================
+
+function notificarPendientes(pendientes) {
+  try {
+    console.log("📧 Enviando notificaciones de tareas pendientes...");
+
+    const encargadas = [
+      CORREOS_CONFIG["Encargada de Taller 1"],
+      CORREOS_CONFIG["Encargada de Taller 2"]
+    ];
+
+    const asunto = `⚠️ ALERTA: ${pendientes.length} Tareas Pendientes en Sistema de Producción`;
+
+    let cuerpo = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #1f4d7f;">⚠️ ALERTA DE TAREAS PENDIENTES</h2>
+
+        <p>Se han detectado <strong>${pendientes.length}</strong> tareas pendientes que requieren atención:</p>
+
+        <table style="border-collapse: collapse; width: 100%; margin-top: 15px;">
+          <tr style="background-color: #fff3cd;">
+            <th style="border: 1px solid #ddd; padding: 10px;">Tarea ID</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Persona</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Descripción</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Cantidad</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Acción</th>
+          </tr>`;
+
+    pendientes.forEach((tarea, idx) => {
+      const color = idx % 2 === 0 ? "#f9f9f9" : "white";
+      cuerpo += `
+          <tr style="background-color: ${color};">
+            <td style="border: 1px solid #ddd; padding: 10px;"><strong>${tarea.tareaID}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${tarea.persona}</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${tarea.descripcion}</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${tarea.cantidad}</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">Reasignar</td>
+          </tr>`;
+    });
+
+    cuerpo += `
+        </table>
+
+        <h3 style="margin-top: 20px; color: #1f4d7f;">💡 RECOMENDACIONES:</h3>
+        <ul>
+          <li>Reasignar tareas a personas con CARGA BAJA</li>
+          <li>Revisar si hay defectos (REPARACIÓN) o simplemente no se completaron (SOBRANTE)</li>
+          <li>Actualizar estado en el sistema cuando se reasigne</li>
+        </ul>
+
+        <p style="margin-top: 20px; color: #666;">
+          <strong>Hora de generación:</strong> ${new Date().toLocaleString("es-MX")}<br>
+          <strong>Sistema:</strong> Producción Automático
+        </p>
+      </body>
+    </html>
+    `;
+
+    encargadas.forEach(email => {
+      try {
+        GmailApp.sendEmail(email, asunto, cuerpo, { htmlBody: cuerpo });
+        console.log(`  ✓ Notificación enviada a ${email}`);
+      } catch (e) {
+        console.log(`  ⚠️ Error enviando a ${email}: ${e.message}`);
+      }
+    });
+
+  } catch (e) {
+    console.log(`Error en notificación: ${e.message}`);
+  }
+}
+
+// ==================== BOTONES DE MENÚ ====================
+
+function btnDetectarTodosPendientes() {
+  const pendientes = detectarTareasPendientes();
+  const ui = SpreadsheetApp.getUi();
+
+  if (pendientes.length === 0) {
+    ui.alert("✅ No hay tareas pendientes\n\n¡Excelente trabajo!");
+    return;
+  }
+
+  let mensaje = `🔍 TAREAS PENDIENTES: ${pendientes.length}\n\n`;
+  pendientes.forEach((tarea, idx) => {
+    mensaje += `${idx + 1}. ${tarea.tareaID} - ${tarea.persona}\n`;
+    mensaje += `   ${tarea.descripcion} (${tarea.cantidad} unidades)\n`;
+    mensaje += `   Área: ${tarea.area}\n\n`;
+  });
+
+  const botones = ui.ButtonSet.YES_NO;
+  const respuesta = ui.alert("TAREAS PENDIENTES", mensaje + "\n¿Deseas reasignar alguna tarea?", botones);
+
+  if (respuesta === ui.Button.YES) {
+    btnReasignarSeleccionada();
+  }
+}
+
+function btnReasignarSeleccionada() {
+  const ui = SpreadsheetApp.getUi();
+  const tareasSheet = SS.getSheetByName("📋 Tareas");
+
+  const response = ui.prompt(
+    "🔄 REASIGNACIÓN MANUAL\n\n" +
+    "Ingresa el ID de la tarea (ej: T003):",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+
+  const tareaID = response.getResponseText().toUpperCase().trim();
+  const datos = tareasSheet.getDataRange().getValues();
+
+  let tareaInfo = null;
+  let filaEncontrada = -1;
+
+  for (let i = 1; i < datos.length; i++) {
+    if (datos[i][0] === tareaID) {
+      tareaInfo = {
+        tareaID: datos[i][0],
+        persona: datos[i][1],
+        descripcion: datos[i][3],
+        area: datos[i][2],
+        cantidad: datos[i][4]
+      };
+      filaEncontrada = i;
+      break;
+    }
+  }
+
+  if (!tareaInfo) {
+    ui.alert(`❌ Tarea ${tareaID} no encontrada`);
+    return;
+  }
+
+  const tipoRespuesta = ui.alert(
+    `📌 TAREA: ${tareaID}\n\n` +
+    `Persona: ${tareaInfo.persona}\n` +
+    `Descripción: ${tareaInfo.descripcion}\n` +
+    `Cantidad: ${tareaInfo.cantidad}\n\n` +
+    `¿Qué tipo de reasignación?\n\n` +
+    `SÍ = REPARACIÓN (tiene defectos)\n` +
+    `NO = TAREA SOBRANTE (no terminó)`,
+    ui.ButtonSet.YES_NO
+  );
+
+  const tipo = tipoRespuesta === ui.Button.YES ? "REPARACIÓN" : "TAREA SOBRANTE";
+
+  const personasSheet = SS.getSheetByName("👥 Personas");
+  const personasData = personasSheet.getDataRange().getValues();
+
+  let personasDisponibles = [];
+  for (let i = 1; i < personasData.length; i++) {
+    const nombre = personasData[i][1];
+    const carga = personasData[i][7];
+    if (nombre && carga && carga.includes("BAJO")) {
+      personasDisponibles.push(`${nombre} (${carga} ⭐)`);
+    }
+  }
+
+  const personaRespuesta = ui.alert(
+    `¿A quién deseas reasignar?\n\n` +
+    `SÍ = A la misma persona (${tareaInfo.persona})\n` +
+    `NO = A otra persona (disponibles: ${personasDisponibles.join(", ")})`,
+    ui.ButtonSet.YES_NO
+  );
+
+  let nuevaPersona = tareaInfo.persona;
+
+  if (personaRespuesta === ui.Button.NO) {
+    const respuesta2 = ui.prompt(
+      `Selecciona nueva persona:\n\n` +
+      `${personasDisponibles.join("\n")}\n\n` +
+      `O escribe otro nombre:`,
+      ui.ButtonSet.OK_CANCEL
+    );
+
+    if (respuesta2.getSelectedButton() === ui.Button.OK) {
+      nuevaPersona = respuesta2.getResponseText().split("(")[0].trim();
+    } else {
+      ui.alert("❌ Cancelado");
+      return;
+    }
+  }
+
+  const confirmRespuesta = ui.alert(
+    `✅ RESUMEN DE REASIGNACIÓN\n\n` +
+    `Tarea: ${tareaID}\n` +
+    `Tipo: ${tipo}\n` +
+    `De: ${tareaInfo.persona}\n` +
+    `Para: ${nuevaPersona}\n\n` +
+    `¿Confirmar?`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirmRespuesta !== ui.Button.YES) {
+    ui.alert("❌ Cancelado");
+    return;
+  }
+
+  ejecutarReasignacion(tareaID, tareaInfo, nuevaPersona, tipo, filaEncontrada);
+
+  ui.alert(
+    `✅ REASIGNACIÓN EXITOSA\n\n` +
+    `Tarea: ${tareaID}\n` +
+    `Tipo: ${tipo}\n` +
+    `De: ${tareaInfo.persona}\n` +
+    `Para: ${nuevaPersona}\n\n` +
+    `✓ Registrado en Historial\n` +
+    `✓ Notificaciones enviadas`
+  );
+}
+
+function ejecutarReasignacion(tareaID, tareaInfo, nuevaPersona, tipo, fila) {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const historialSheet = SS.getSheetByName("📝 Historial");
+    const reparacionesSheet = SS.getSheetByName("🔧 Reparaciones");
+
+    tareasSheet.getRange(fila + 1, 2).setValue(nuevaPersona);
+    tareasSheet.getRange(fila + 1, 7).setValue("En Progreso");
+    tareasSheet.getRange(fila + 1, 10).setValue(`Reasignado de: ${tareaInfo.persona}`);
+
+    if (tipo === "REPARACIÓN") {
+      const ultimaFila = reparacionesSheet.getLastRow() + 1;
+      const reparacionID = `REP-${tareaID}`;
+
+      reparacionesSheet.getRange(ultimaFila, 1).setValue(reparacionID);
+      reparacionesSheet.getRange(ultimaFila, 2).setValue(tareaID);
+      reparacionesSheet.getRange(ultimaFila, 3).setValue("Reasignación por reparación");
+      reparacionesSheet.getRange(ultimaFila, 4).setValue(nuevaPersona);
+      reparacionesSheet.getRange(ultimaFila, 7).setValue("En Progreso");
+      reparacionesSheet.getRange(ultimaFila, 8).setValue(new Date());
+    }
+
+    const ultimaFila = historialSheet.getLastRow() + 1;
+    const ahora = new Date();
+    historialSheet.getRange(ultimaFila, 1).setValue(ahora);
+    historialSheet.getRange(ultimaFila, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(ultimaFila, 3).setValue("Reasignación");
+    historialSheet.getRange(ultimaFila, 4).setValue(tareaID);
+    historialSheet.getRange(ultimaFila, 5).setValue(tipo);
+    historialSheet.getRange(ultimaFila, 6).setValue(tareaInfo.persona);
+    historialSheet.getRange(ultimaFila, 7).setValue(nuevaPersona);
+    historialSheet.getRange(ultimaFila, 8).setValue(tareaInfo.persona !== nuevaPersona ? "A otra persona" : "A la misma");
+    historialSheet.getRange(ultimaFila, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(ultimaFila, 10).setValue("✅ Exitosa");
+
+    const asunto = `✅ Tarea ${tareaID} Reasignada - ${tipo}`;
+    const cuerpo = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #1f4d7f;">✅ TAREA REASIGNADA</h2>
+
+        <p><strong>Tarea ID:</strong> ${tareaID}</p>
+        <p><strong>Descripción:</strong> ${tareaInfo.descripcion}</p>
+        <p><strong>Cantidad:</strong> ${tareaInfo.cantidad}</p>
+        <p><strong>Área:</strong> ${tareaInfo.area}</p>
+        <p><strong>Tipo:</strong> ${tipo}</p>
+
+        <h3>Reasignación:</h3>
+        <p><strong>De:</strong> ${tareaInfo.persona}</p>
+        <p><strong>Para:</strong> ${nuevaPersona}</p>
+
+        <p><strong>Hora:</strong> ${ahora.toLocaleString("es-MX")}</p>
+      </body>
+    </html>
+    `;
+
+    try {
+      GmailApp.sendEmail(CORREOS_CONFIG["Gerente de Producción"], asunto, cuerpo, { htmlBody: cuerpo });
+      console.log("  ✓ Notificación de reasignación enviada");
+    } catch (e) {
+      console.log(`  ⚠️ Error enviando notificación: ${e.message}`);
+    }
+
+    actualizarPanelControl();
+
+  } catch (e) {
+    console.log(`Error en reasignación: ${e.message}`);
+  }
+}
+
+function btnReasignacionAutomatica() {
+  const ui = SpreadsheetApp.getUi();
+  const pendientes = detectarTareasPendientes();
+
+  if (pendientes.length === 0) {
+    ui.alert("✅ No hay tareas pendientes");
+    return;
+  }
+
+  const confirm = ui.alert(
+    `⚡ REASIGNACIÓN AUTOMÁTICA\n\n` +
+    `Se reasignarán ${pendientes.length} tareas a la misma persona\n\n` +
+    `¿Continuar?`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) return;
+
+  let reasignadas = 0;
+
+  pendientes.forEach((tarea) => {
+    const tareaInfo = {
+      tareaID: tarea.tareaID,
+      persona: tarea.persona,
+      descripcion: tarea.descripcion,
+      area: tarea.area,
+      cantidad: tarea.cantidad
+    };
+    ejecutarReasignacion(tarea.tareaID, tareaInfo, tarea.persona, "TAREA SOBRANTE", tarea.fila - 1);
+    reasignadas++;
+  });
+
+  ui.alert(
+    `✅ REASIGNACIÓN AUTOMÁTICA COMPLETADA\n\n` +
+    `Tareas procesadas: ${reasignadas}\n` +
+    `Tipo: TAREA SOBRANTE\n` +
+    `Estado: Las mismas personas continúan`
+  );
+}
+
+function btnMostrarHistorial() {
+  const ui = SpreadsheetApp.getUi();
+  const historialSheet = SS.getSheetByName("📝 Historial");
+  const datos = historialSheet.getDataRange().getValues();
+
+  let mensaje = "📝 ÚLTIMOS CAMBIOS\n\n";
+
+  const desde = Math.max(1, datos.length - 10);
+
+  for (let i = desde; i < datos.length; i++) {
+    const fila = datos[i];
+    if (fila[3]) {
+      mensaje += `${fila[0]} ${fila[1]}\n`;
+      mensaje += `${fila[3]} (${fila[4]})\n`;
+      mensaje += `${fila[5]} → ${fila[6]}\n`;
+      mensaje += `${fila[9]}\n\n`;
+    }
+  }
+
+  ui.alert(mensaje);
+}
+
+// ==================== HERRAMIENTAS ====================
+
+function buscarTarea() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt(
+    "🔍 BUSCAR TAREA\n\n" +
+    "Ingresa el ID (ej: T001):",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+
+  const tareaID = response.getResponseText().toUpperCase().trim();
+  const tareasSheet = SS.getSheetByName("📋 Tareas");
+  const datos = tareasSheet.getDataRange().getValues();
+
+  for (let i = 1; i < datos.length; i++) {
+    if (datos[i][0] === tareaID) {
+      const info = datos[i];
+      ui.alert(
+        `✅ TAREA ENCONTRADA\n\n` +
+        `ID: ${info[0]}\n` +
+        `Persona: ${info[1]}\n` +
+        `Área: ${info[2]}\n` +
+        `Descripción: ${info[3]}\n` +
+        `Cantidad: ${info[4]}\n` +
+        `Estado: ${info[6]}\n` +
+        `Notas: ${info[8] || "Sin notas"}`
+      );
+      return;
+    }
+  }
+
+  ui.alert(`❌ Tarea ${tareaID} no encontrada`);
+}
+
+function analizarCargas() {
+  const ui = SpreadsheetApp.getUi();
+  const personasSheet = SS.getSheetByName("👥 Personas");
+  const tareasSheet = SS.getSheetByName("📋 Tareas");
+
+  const personasData = personasSheet.getDataRange().getValues();
+  const tareasData = tareasSheet.getDataRange().getValues();
+
+  let mensaje = "👥 ANÁLISIS DE CARGAS DE TRABAJO\n\n";
+
+  for (let i = 1; i < personasData.length; i++) {
+    const nombre = personasData[i][1];
+    if (!nombre) break;
+
+    let tareasPendientes = 0;
+    let tareasEnProgreso = 0;
+
+    for (let j = 1; j < tareasData.length; j++) {
+      if (tareasData[j][1] === nombre) {
+        if (tareasData[j][6].includes("PENDIENTE")) tareasPendientes++;
+        if (tareasData[j][6].includes("Progreso")) tareasEnProgreso++;
+      }
+    }
+
+    const eficiencia = personasData[i][6];
+    const carga = personasData[i][7];
+
+    mensaje += `${nombre}\n`;
+    mensaje += `  • Eficiencia: ${(eficiencia * 100).toFixed(0)}%\n`;
+    mensaje += `  • Carga: ${carga}\n`;
+    mensaje += `  • En progreso: ${tareasEnProgreso}\n`;
+    mensaje += `  • Pendientes: ${tareasPendientes}\n\n`;
+  }
+
+  ui.alert(mensaje);
+}
+
+function verEficiencia() {
+  const ui = SpreadsheetApp.getUi();
+  const personasSheet = SS.getSheetByName("👥 Personas");
+  const datos = personasSheet.getDataRange().getValues();
+
+  let mensaje = "📊 EFICIENCIA POR PERSONA\n\n";
+  let baja = [];
+
+  for (let i = 1; i < datos.length; i++) {
+    const nombre = datos[i][1];
+    const eficiencia = datos[i][6];
+
+    if (typeof eficiencia === 'number') {
+      const pct = (eficiencia * 100).toFixed(0);
+      const icon = eficiencia >= 0.9 ? "🟢" : eficiencia >= 0.8 ? "🟡" : "🔴";
+
+      mensaje += `${icon} ${nombre}: ${pct}%\n`;
+
+      if (eficiencia < 0.8) {
+        baja.push(nombre);
+      }
+    }
+  }
+
+  if (baja.length > 0) {
+    mensaje += `\n⚠️ EFICIENCIA BAJA (<80%):\n`;
+    baja.forEach(nombre => {
+      mensaje += `• ${nombre} - Revisar rendimiento\n`;
+    });
+  }
+
+  ui.alert(mensaje);
+}
+
+function actualizarPanelControlUI() {
+  actualizarPanelControl();
+  SpreadsheetApp.getUi().alert("✅ Panel Control actualizado");
+}
+
+function actualizarPanelControl() {
+  try {
+    const panelSheet = SS.getSheetByName("🎯 Panel Control");
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+
+    const datos = tareasSheet.getDataRange().getValues();
+
+    let total = 0;
+    let completadas = 0;
+    let pendientes = 0;
+
+    for (let i = 1; i < datos.length; i++) {
+      const estado = datos[i][6];
+      total++;
+
+      if (estado.includes("Completada")) completadas++;
+      if (estado.includes("PENDIENTE")) pendientes++;
+    }
+
+    panelSheet.getRange("B6").setValue(total);
+    panelSheet.getRange("B7").setValue(completadas);
+    panelSheet.getRange("B8").setValue(pendientes);
+
+  } catch (e) {
+    console.log(`Error actualizando panel: ${e.message}`);
+  }
+}
+
+function mostrarAyuda() {
+  SpreadsheetApp.getUi().alert(
+    "📖 AYUDA RÁPIDA\n\n" +
+    "➕ Asignar Nueva Tarea\n" +
+    "Crea y asigna nuevas tareas\n\n" +
+    "🔍 Detectar Pendientes\n" +
+    "Encuentra tareas sin completar\n\n" +
+    "🔄 Reasignar Manual\n" +
+    "Mueve tarea de persona a persona\n\n" +
+    "⚡ Reasignación Automática\n" +
+    "Reasigna todas las pendientes\n\n" +
+    "📧 Enviar Notificación\n" +
+    "Notifica a encargadas manualmente\n\n" +
+    "📊 Generar Reporte\n" +
+    "Crea reporte diario\n\n" +
+    "Ve a 📖 Instrucciones para más"
+  );
+}
+
+// ==================== ELIMINAR DATOS DE EJEMPLO ====================
+
+function eliminarDatosEjemplo() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Confirmación 1: Advertencia
+  const confirm1 = ui.alert(
+    "⚠️ ELIMINAR DATOS DE EJEMPLO\n\n" +
+    "Esta acción eliminará TODOS los datos de ejemplo:\n\n" +
+    "• Personas (excepto encabezados)\n" +
+    "• Tareas de ejemplo\n" +
+    "• Registros de tiempos\n" +
+    "• Reparaciones\n" +
+    "• Historial completo\n\n" +
+    "El sistema quedará VACÍO y listo para producción.\n\n" +
+    "¿Deseas continuar?",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm1 !== ui.Button.YES) {
+    ui.alert("❌ Cancelado - No se eliminaron los datos");
+    return;
+  }
+
+  // Confirmación 2: Doble verificación
+  const confirm2 = ui.alert(
+    "🔴 ÚLTIMA CONFIRMACIÓN\n\n" +
+    "¿Estás COMPLETAMENTE SEGURO?\n\n" +
+    "Esta acción NO se puede deshacer.\n\n" +
+    "Para recuperar los datos de ejemplo tendrás que\n" +
+    "ejecutar el Setup Completo nuevamente.",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm2 !== ui.Button.YES) {
+    ui.alert("❌ Cancelado - No se eliminaron los datos");
+    return;
+  }
+
+  try {
+    console.log("🗑️ Eliminando datos de ejemplo...");
+
+    // 1. Limpiar Personas (dejar solo encabezados)
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const ultimaFilaPersonas = personasSheet.getLastRow();
+    if (ultimaFilaPersonas > 1) {
+      personasSheet.deleteRows(2, ultimaFilaPersonas - 1);
+      console.log("  ✓ Personas limpiadas");
+    }
+
+    // 2. Limpiar Tareas (dejar solo encabezados)
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const ultimaFilaTareas = tareasSheet.getLastRow();
+    if (ultimaFilaTareas > 1) {
+      tareasSheet.deleteRows(2, ultimaFilaTareas - 1);
+      console.log("  ✓ Tareas limpiadas");
+    }
+
+    // 3. Limpiar Tiempos (dejar solo encabezados)
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const ultimaFilaTiempos = tiemposSheet.getLastRow();
+    if (ultimaFilaTiempos > 1) {
+      tiemposSheet.deleteRows(2, ultimaFilaTiempos - 1);
+      console.log("  ✓ Tiempos limpiados");
+    }
+
+    // 4. Limpiar Reparaciones (dejar solo encabezados)
+    const reparacionesSheet = SS.getSheetByName("🔧 Reparaciones");
+    const ultimaFilaReparaciones = reparacionesSheet.getLastRow();
+    if (ultimaFilaReparaciones > 1) {
+      reparacionesSheet.deleteRows(2, ultimaFilaReparaciones - 1);
+      console.log("  ✓ Reparaciones limpiadas");
+    }
+
+    // 5. Limpiar Historial (dejar solo encabezados)
+    const historialSheet = SS.getSheetByName("📝 Historial");
+    const ultimaFilaHistorial = historialSheet.getLastRow();
+    if (ultimaFilaHistorial > 1) {
+      historialSheet.deleteRows(2, ultimaFilaHistorial - 1);
+      console.log("  ✓ Historial limpiado");
+    }
+
+    // 6. Actualizar Panel Control a ceros
+    const panelSheet = SS.getSheetByName("🎯 Panel Control");
+    panelSheet.getRange("B6").setValue(0);  // Total tareas
+    panelSheet.getRange("B7").setValue(0);  // Completadas
+    panelSheet.getRange("B8").setValue(0);  // Pendientes
+    panelSheet.getRange("B9").setValue(0);  // Con reparación
+    panelSheet.getRange("B10").setValue(0); // Eficiencia promedio
+
+    // Limpiar tareas pendientes del panel
+    panelSheet.getRange("A14:E20").clearContent();
+    console.log("  ✓ Panel Control actualizado");
+
+    // 7. Registrar en Historial que se eliminaron los datos
+    const ahora = new Date();
+    historialSheet.getRange(2, 1).setValue(ahora);
+    historialSheet.getRange(2, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(2, 3).setValue("Sistema Limpiado");
+    historialSheet.getRange(2, 4).setValue("-");
+    historialSheet.getRange(2, 5).setValue("Limpieza");
+    historialSheet.getRange(2, 6).setValue("-");
+    historialSheet.getRange(2, 7).setValue("-");
+    historialSheet.getRange(2, 8).setValue("Datos de ejemplo eliminados");
+    historialSheet.getRange(2, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(2, 10).setValue("✅ Sistema listo");
+
+    console.log("✅ Datos de ejemplo eliminados correctamente");
+
+    ui.alert(
+      "✅ DATOS ELIMINADOS CORRECTAMENTE\n\n" +
+      "El sistema ha sido limpiado:\n\n" +
+      "✓ Personas: VACÍO\n" +
+      "✓ Tareas: VACÍO\n" +
+      "✓ Tiempos: VACÍO\n" +
+      "✓ Reparaciones: VACÍO\n" +
+      "✓ Historial: Registro de limpieza\n" +
+      "✓ Panel Control: Actualizado a 0\n\n" +
+      "🎯 Sistema listo para producción!\n\n" +
+      "Ahora puedes:\n" +
+      "1. Agregar tus personas reales en la hoja '👥 Personas'\n" +
+      "2. Comenzar a asignar tareas desde el menú\n" +
+      "3. El sistema registrará todo desde cero"
+    );
+
+  } catch (e) {
+    console.log(`❌ Error eliminando datos: ${e.message}`);
+    ui.alert(`❌ Error: ${e.message}\n\nAlgunos datos podrían no haberse eliminado correctamente.`);
+  }
+}
+
+// ==================== REPORTES Y AUTOMATIZACIONES ====================
+
+function btnGenerarReporteManual() {
+  generarReporteDiarioAutomatico();
+  SpreadsheetApp.getUi().alert("✅ Reporte generado y enviado");
+}
+
+function generarReporteDiarioAutomatico() {
+  try {
+    console.log("📊 Generando reporte diario...");
+
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = tareasSheet.getDataRange().getValues();
+    const personasData = personasSheet.getDataRange().getValues();
+
+    let pendientes = [];
+    let completadas = 0;
+    let enProgreso = 0;
+
+    for (let i = 1; i < datos.length; i++) {
+      if (datos[i][6].includes("PENDIENTE")) {
+        pendientes.push({
+          id: datos[i][0],
+          persona: datos[i][1],
+          descripcion: datos[i][3]
+        });
+      } else if (datos[i][6].includes("Completada")) {
+        completadas++;
+      } else if (datos[i][6].includes("Progreso")) {
+        enProgreso++;
+      }
+    }
+
+    const asunto = `📊 REPORTE DIARIO DE PRODUCCIÓN - ${new Date().toLocaleDateString("es-MX")}`;
+
+    let cuerpo = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #1f4d7f;">📊 REPORTE DIARIO DE PRODUCCIÓN</h2>
+
+        <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-MX")}</p>
+        <p><strong>Hora de generación:</strong> ${new Date().toLocaleTimeString("es-MX")}</p>
+
+        <h3>RESUMEN DEL DÍA</h3>
+        <table style="border-collapse: collapse; width: 100%;">
+          <tr style="background-color: #e8f0f7;">
+            <th style="border: 1px solid #ddd; padding: 10px;">Métrica</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Valor</th>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 10px;">Total de tareas</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${datos.length - 1}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 10px;">Completadas</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">✅ ${completadas}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 10px;">En progreso</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">⏳ ${enProgreso}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 10px;">Pendientes</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">🔴 ${pendientes.length}</td>
+          </tr>
+        </table>`;
+
+    if (pendientes.length > 0) {
+      cuerpo += `
+        <h3 style="margin-top: 20px;">TAREAS PENDIENTES</h3>
+        <table style="border-collapse: collapse; width: 100%;">
+          <tr style="background-color: #fff3cd;">
+            <th style="border: 1px solid #ddd; padding: 10px;">Tarea ID</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Persona</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Descripción</th>
+          </tr>`;
+
+      pendientes.forEach((tarea, idx) => {
+        const color = idx % 2 === 0 ? "#f9f9f9" : "white";
+        cuerpo += `
+          <tr style="background-color: ${color};">
+            <td style="border: 1px solid #ddd; padding: 10px;"><strong>${tarea.id}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${tarea.persona}</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${tarea.descripcion}</td>
+          </tr>`;
+      });
+
+      cuerpo += `</table>`;
+    }
+
+    cuerpo += `
+        <h3 style="margin-top: 20px;">RECOMENDACIONES</h3>
+        <ul>
+          <li>Reasignar tareas pendientes a personas con carga BAJA</li>
+          <li>Revisar si hay defectos (REPARACIÓN) o simplemente no se completaron</li>
+          <li>Verificar eficiencia de operarios con rendimiento bajo</li>
+        </ul>
+
+        <p style="margin-top: 20px; color: #666;">
+          Reporte automático del Sistema de Producción
+        </p>
+      </body>
+    </html>
+    `;
+
+    const destinatarios = [
+      CORREOS_CONFIG["Gerente de Producción"],
+      CORREOS_CONFIG["Admininstrador Sistema"]
+    ];
+
+    destinatarios.forEach(email => {
+      try {
+        GmailApp.sendEmail(email, asunto, cuerpo, { htmlBody: cuerpo });
+        console.log(`  ✓ Reporte enviado a ${email}`);
+      } catch (e) {
+        console.log(`  ⚠️ Error enviando a ${email}: ${e.message}`);
+      }
+    });
+
+  } catch (e) {
+    console.log(`Error generando reporte: ${e.message}`);
+  }
+}
+
+function verificarEficienciaBaja() {
+  try {
+    console.log("📊 Verificando eficiencia...");
+
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = personasSheet.getDataRange().getValues();
+
+    let bajaEficiencia = [];
+
+    for (let i = 1; i < datos.length; i++) {
+      const nombre = datos[i][1];
+      const eficiencia = datos[i][6];
+
+      if (typeof eficiencia === 'number' && eficiencia < 0.8) {
+        bajaEficiencia.push({
+          nombre: nombre,
+          eficiencia: (eficiencia * 100).toFixed(0),
+          area: datos[i][3]
+        });
+      }
+    }
+
+    if (bajaEficiencia.length > 0) {
+      console.log(`⚠️ Se encontraron ${bajaEficiencia.length} personas con eficiencia baja`);
+      notificarEficienciaBaja(bajaEficiencia);
+    }
+
+  } catch (e) {
+    console.log(`Error verificando eficiencia: ${e.message}`);
+  }
+}
+
+function notificarEficienciaBaja(personas) {
+  try {
+    const asunto = `⚠️ ALERTA: Eficiencia Baja Detectada`;
+
+    let cuerpo = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #cc3333;">⚠️ ALERTA DE EFICIENCIA BAJA</h2>
+
+        <p>Se han detectado ${personas.length} persona(s) con eficiencia menor a 80%:</p>
+
+        <table style="border-collapse: collapse; width: 100%; margin-top: 15px;">
+          <tr style="background-color: #ffcccc;">
+            <th style="border: 1px solid #ddd; padding: 10px;">Persona</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Eficiencia</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Área</th>
+            <th style="border: 1px solid #ddd; padding: 10px;">Recomendación</th>
+          </tr>`;
+
+    personas.forEach((p, idx) => {
+      const color = idx % 2 === 0 ? "#f9f9f9" : "white";
+      cuerpo += `
+          <tr style="background-color: ${color};">
+            <td style="border: 1px solid #ddd; padding: 10px;"><strong>${p.nombre}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 10px;">🔴 ${p.eficiencia}%</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">${p.area}</td>
+            <td style="border: 1px solid #ddd; padding: 10px;">Revisar y capacitar</td>
+          </tr>`;
+    });
+
+    cuerpo += `
+        </table>
+
+        <h3 style="margin-top: 20px;">ACCIONES RECOMENDADAS:</h3>
+        <ul>
+          <li>Revisar tareas asignadas</li>
+          <li>Considerar capacitación adicional</li>
+          <li>Redistribuir carga si es necesario</li>
+          <li>Hacer seguimiento semanal</li>
+        </ul>
+      </body>
+    </html>
+    `;
+
+    GmailApp.sendEmail(EMAIL_ADMIN, asunto, cuerpo, { htmlBody: cuerpo });
+    console.log("  ✓ Alerta de eficiencia baja enviada");
+
+  } catch (e) {
+    console.log(`Error notificando eficiencia: ${e.message}`);
+  }
+}
+
+function btnEnviarNotificacionManual() {
+  const pendientes = detectarTareasPendientes();
+
+  if (pendientes.length > 0) {
+    notificarPendientes(pendientes);
+    SpreadsheetApp.getUi().alert(`✅ Notificación enviada a ${Object.keys(CORREOS_CONFIG).filter(k => k.includes("Encargada")).length} encargadas`);
+  } else {
+    SpreadsheetApp.getUi().alert("✅ No hay tareas pendientes para notificar");
+  }
 }

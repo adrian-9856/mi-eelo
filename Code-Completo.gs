@@ -645,7 +645,13 @@ function crearTriggers() {
       .everyMinutes(30)
       .create();
 
-    console.log("  ✓ Triggers creados");
+    ScriptApp.newTrigger("actualizarTodasEficiencias")
+      .timeBased()
+      .atHour(17)
+      .everyDays(1)
+      .create();
+
+    console.log("  ✓ Triggers creados (incluye actualización diaria de eficiencias)");
   } catch (e) {
     console.log(`  ⚠️ Error triggers: ${e.message}`);
   }
@@ -658,6 +664,8 @@ function onOpen() {
 
   ui.createMenu("🔄 REASIGNACIONES")
     .addItem("➕ Asignar Nueva Tarea", "btnAsignarTarea")
+    .addItem("✅ Completar Tarea", "btnCompletarTarea")
+    .addSeparator()
     .addItem("🔍 Detectar Pendientes", "btnDetectarTodosPendientes")
     .addItem("🔄 Reasignar Manual", "btnReasignarSeleccionada")
     .addItem("⚡ Reasignación Automática", "btnReasignacionAutomatica")
@@ -675,6 +683,8 @@ function onOpen() {
     .addItem("🔍 Buscar Tarea", "buscarTarea")
     .addItem("👥 Análisis de Cargas", "analizarCargas")
     .addItem("📈 Ver Eficiencia", "verEficiencia")
+    .addSeparator()
+    .addItem("📊 Actualizar Todas las Eficiencias", "btnActualizarTodasEficiencias")
     .addSeparator()
     .addItem("ℹ️ Ayuda", "mostrarAyuda")
     .addToUi();
@@ -936,6 +946,477 @@ function crearNuevaTarea(descripcion, cantidad, area, persona) {
 
   } catch (e) {
     console.log(`Error creando tarea: ${e.message}`);
+  }
+}
+
+// ==================== FUNCIÓN: COMPLETAR TAREA ====================
+
+function btnCompletarTarea() {
+  mostrarFormularioCompletar();
+}
+
+function mostrarFormularioCompletar() {
+  const html = HtmlService.createHtmlOutput(getFormularioCompletarHTML())
+    .setWidth(500)
+    .setHeight(500);
+  SpreadsheetApp.getUi().showModalDialog(html, '✅ COMPLETAR TAREA');
+}
+
+function getFormularioCompletarHTML() {
+  // Obtener tareas en progreso desde la hoja
+  const tareasSheet = SS.getSheetByName("📋 Tareas");
+  const tareasData = tareasSheet.getDataRange().getValues();
+
+  let opcionesTareas = '';
+  for (let i = 1; i < tareasData.length; i++) {
+    const tareaID = tareasData[i][0];
+    const persona = tareasData[i][1];
+    const descripcion = tareasData[i][3];
+    const estado = tareasData[i][6];
+
+    if (tareaID && estado === "En Progreso") {
+      opcionesTareas += `<option value="${tareaID}|${persona}">${tareaID} - ${persona} - ${descripcion}</option>`;
+    }
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .form-group {
+            margin-bottom: 20px;
+          }
+          label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1f4d7f;
+          }
+          input[type="number"],
+          select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+          }
+          select {
+            cursor: pointer;
+            background-color: white;
+          }
+          input:focus,
+          select:focus {
+            border-color: #1f4d7f;
+            outline: none;
+          }
+          .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+          .btn-primary {
+            background-color: #33aa33;
+            color: white;
+          }
+          .btn-primary:hover {
+            background-color: #2d8f2d;
+          }
+          .btn-secondary {
+            background-color: #ccc;
+            color: #333;
+          }
+          .btn-secondary:hover {
+            background-color: #999;
+          }
+          .buttons {
+            margin-top: 30px;
+            text-align: center;
+          }
+          .titulo {
+            color: #1f4d7f;
+            margin-bottom: 20px;
+            font-size: 20px;
+          }
+          .required {
+            color: red;
+          }
+          .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #1f4d7f;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h2 class="titulo">✅ Completar Tarea</h2>
+
+        <div class="info-box">
+          📊 Al completar una tarea, se actualizará automáticamente la eficiencia del operario
+        </div>
+
+        <form id="formulario">
+          <div class="form-group">
+            <label for="tarea">Tarea a Completar <span class="required">*</span></label>
+            <select id="tarea" name="tarea" required>
+              <option value="">-- Selecciona una tarea --</option>
+              ${opcionesTareas}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="minutos">Tiempo Real (en minutos) <span class="required">*</span></label>
+            <input type="number" id="minutos" name="minutos" placeholder="Ej: 45" min="1" required>
+          </div>
+
+          <div class="buttons">
+            <button type="submit" class="btn btn-primary">✅ Marcar como Completada</button>
+            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">❌ Cancelar</button>
+          </div>
+        </form>
+
+        <script>
+          document.getElementById('formulario').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const tareaData = document.getElementById('tarea').value;
+            const minutos = parseInt(document.getElementById('minutos').value);
+
+            if (!tareaData || !minutos) {
+              alert('❌ Por favor completa todos los campos');
+              return;
+            }
+
+            // Separar tareaID y persona
+            const [tareaID, persona] = tareaData.split('|');
+
+            // Deshabilitar botón para evitar doble envío
+            document.querySelector('.btn-primary').disabled = true;
+            document.querySelector('.btn-primary').textContent = '⏳ Completando...';
+
+            // Enviar datos a Google Apps Script
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ TAREA COMPLETADA CORRECTAMENTE\\n\\n' +
+                      'Tarea: ' + tareaID + '\\n' +
+                      'Persona: ' + persona + '\\n' +
+                      'Tiempo Real: ' + minutos + ' minutos\\n\\n' +
+                      '📊 La eficiencia ha sido actualizada automáticamente');
+                google.script.host.close();
+              })
+              .withFailureHandler(function(error) {
+                alert('❌ Error: ' + error);
+                document.querySelector('.btn-primary').disabled = false;
+                document.querySelector('.btn-primary').textContent = '✅ Marcar como Completada';
+              })
+              .procesarTareaCompletada(tareaID, persona, minutos);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function procesarTareaCompletada(tareaID, persona, minutos) {
+  marcarTareaCompletada(tareaID, persona, minutos);
+}
+
+function btnActualizarTodasEficiencias() {
+  const ui = SpreadsheetApp.getUi();
+  const respuesta = ui.alert(
+    '📊 ACTUALIZAR EFICIENCIAS',
+    '¿Deseas recalcular las eficiencias de todas las personas basándose en sus tareas completadas?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (respuesta === ui.Button.YES) {
+    actualizarTodasEficiencias();
+    ui.alert('✅ EFICIENCIAS ACTUALIZADAS\n\nSe han recalculado las eficiencias de todas las personas basándose en su desempeño real.');
+  }
+}
+
+// ==================== SISTEMA DE EFICIENCIA AUTOMÁTICA ====================
+
+/**
+ * Calcula la eficiencia de una persona basándose en su desempeño real
+ * @param {string} nombrePersona - Nombre de la persona
+ * @return {number} - Eficiencia en porcentaje (0-100)
+ */
+function calcularEficienciaPersona(nombrePersona) {
+  try {
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const reparacionesSheet = SS.getSheetByName("🔧 Reparaciones");
+
+    // Obtener todas las tareas completadas de esta persona
+    const datosTiempos = tiemposSheet.getDataRange().getValues();
+    const tareasPersona = [];
+
+    for (let i = 1; i < datosTiempos.length; i++) {
+      const persona = datosTiempos[i][1];
+      const estado = datosTiempos[i][7];
+
+      if (persona === nombrePersona && estado === "✅") {
+        tareasPersona.push({
+          tareaID: datosTiempos[i][0],
+          tiempoReal: datosTiempos[i][4],
+          tiempoEstimado: datosTiempos[i][5],
+          variacion: datosTiempos[i][6]
+        });
+      }
+    }
+
+    // Si no tiene tareas completadas, retornar eficiencia inicial
+    if (tareasPersona.length === 0) {
+      return 85.0;
+    }
+
+    // Limitar a las últimas 10 tareas para el cálculo
+    const tareasRecientes = tareasPersona.slice(-10);
+
+    // Calcular eficiencia basada en tiempos
+    let sumaEficienciaTiempo = 0;
+    let tareasValidas = 0;
+
+    tareasRecientes.forEach(tarea => {
+      const real = parsearMinutos(tarea.tiempoReal);
+      const estimado = parsearMinutos(tarea.tiempoEstimado);
+
+      if (real > 0 && estimado > 0) {
+        // Eficiencia = (Tiempo Estimado / Tiempo Real) * 100
+        // Si termina antes: eficiencia > 100, se limita a 100
+        // Si termina después: eficiencia < 100
+        let eficienciaTarea = (estimado / real) * 100;
+
+        // Limitar a 100% como máximo
+        if (eficienciaTarea > 100) eficienciaTarea = 100;
+
+        sumaEficienciaTiempo += eficienciaTarea;
+        tareasValidas++;
+      }
+    });
+
+    // Calcular promedio de eficiencia de tiempo (70% del peso)
+    const eficienciaTiempo = tareasValidas > 0 ? (sumaEficienciaTiempo / tareasValidas) : 85;
+
+    // Calcular penalización por reparaciones (30% del peso)
+    const datosReparaciones = reparacionesSheet.getDataRange().getValues();
+    let reparacionesPersona = 0;
+
+    for (let i = 1; i < datosReparaciones.length; i++) {
+      const persona = datosReparaciones[i][3];
+      if (persona === nombrePersona) {
+        reparacionesPersona++;
+      }
+    }
+
+    // Calcular factor de calidad (sin reparaciones = 100%, cada reparación reduce 10%)
+    const factorCalidad = Math.max(0, 100 - (reparacionesPersona * 10));
+
+    // Eficiencia final: 70% tiempo + 30% calidad
+    const eficienciaFinal = (eficienciaTiempo * 0.7) + (factorCalidad * 0.3);
+
+    // Redondear a 2 decimales y limitar entre 0 y 100
+    return Math.max(0, Math.min(100, Math.round(eficienciaFinal * 100) / 100));
+
+  } catch (e) {
+    console.log(`Error calculando eficiencia para ${nombrePersona}: ${e.message}`);
+    return 85.0; // Retornar eficiencia por defecto en caso de error
+  }
+}
+
+/**
+ * Convierte una cadena de tiempo a minutos
+ * @param {string} tiempo - Tiempo en formato "XX min" o "X h YY min"
+ * @return {number} - Minutos totales
+ */
+function parsearMinutos(tiempo) {
+  if (!tiempo || tiempo === "-") return 0;
+
+  try {
+    let minutos = 0;
+    const tiempoStr = tiempo.toString().toLowerCase();
+
+    // Buscar horas
+    const horasMatch = tiempoStr.match(/(\d+)\s*h/);
+    if (horasMatch) {
+      minutos += parseInt(horasMatch[1]) * 60;
+    }
+
+    // Buscar minutos
+    const minutosMatch = tiempoStr.match(/(\d+)\s*min/);
+    if (minutosMatch) {
+      minutos += parseInt(minutosMatch[1]);
+    }
+
+    return minutos;
+  } catch (e) {
+    console.log(`Error parseando tiempo: ${tiempo}`);
+    return 0;
+  }
+}
+
+/**
+ * Actualiza la eficiencia de una persona específica en la hoja Personas
+ * @param {string} nombrePersona - Nombre de la persona
+ */
+function actualizarEficienciaPersona(nombrePersona) {
+  try {
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = personasSheet.getDataRange().getValues();
+
+    // Buscar la fila de la persona
+    for (let i = 1; i < datos.length; i++) {
+      const nombre = datos[i][1]; // Columna B (Nombre)
+
+      if (nombre === nombrePersona) {
+        const eficiencia = calcularEficienciaPersona(nombrePersona);
+        personasSheet.getRange(i + 1, 5).setValue(eficiencia); // Columna E (Eficiencia)
+        console.log(`  ✓ Eficiencia actualizada para ${nombrePersona}: ${eficiencia}%`);
+        return;
+      }
+    }
+  } catch (e) {
+    console.log(`Error actualizando eficiencia de ${nombrePersona}: ${e.message}`);
+  }
+}
+
+/**
+ * Actualiza las eficiencias de todas las personas
+ */
+function actualizarTodasEficiencias() {
+  try {
+    console.log("📊 Actualizando eficiencias de todas las personas...");
+
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const datos = personasSheet.getDataRange().getValues();
+
+    let actualizadas = 0;
+
+    for (let i = 1; i < datos.length; i++) {
+      const nombre = datos[i][1]; // Columna B (Nombre)
+
+      if (nombre && nombre !== "") {
+        const eficiencia = calcularEficienciaPersona(nombre);
+        personasSheet.getRange(i + 1, 5).setValue(eficiencia); // Columna E (Eficiencia)
+        actualizadas++;
+      }
+    }
+
+    console.log(`✅ ${actualizadas} eficiencias actualizadas`);
+
+  } catch (e) {
+    console.log(`Error actualizando todas las eficiencias: ${e.message}`);
+  }
+}
+
+/**
+ * Marca una tarea como completada y registra el tiempo real
+ * @param {string} tareaID - ID de la tarea
+ * @param {string} nombrePersona - Nombre de la persona
+ * @param {number} minutosReales - Tiempo real en minutos
+ */
+function marcarTareaCompletada(tareaID, nombrePersona, minutosReales) {
+  try {
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const historialSheet = SS.getSheetByName("📝 Historial");
+
+    // 1. Buscar la tarea en la hoja Tareas
+    const datosTareas = tareasSheet.getDataRange().getValues();
+    let filaTarea = -1;
+    let datosTarea = null;
+
+    for (let i = 1; i < datosTareas.length; i++) {
+      if (datosTareas[i][0] === tareaID) {
+        filaTarea = i + 1;
+        datosTarea = datosTareas[i];
+        break;
+      }
+    }
+
+    if (filaTarea === -1) {
+      throw new Error(`Tarea ${tareaID} no encontrada`);
+    }
+
+    // 2. Actualizar estado en hoja Tareas
+    tareasSheet.getRange(filaTarea, 7).setValue("Completada");
+    tareasSheet.getRange(filaTarea, 9).setValue(`Completada en ${minutosReales} minutos`);
+
+    // 3. Buscar el registro de tiempo correspondiente
+    const datosTiempos = tiemposSheet.getDataRange().getValues();
+    let filaTiempo = -1;
+
+    for (let i = 1; i < datosTiempos.length; i++) {
+      if (datosTiempos[i][0] === tareaID && datosTiempos[i][1] === nombrePersona) {
+        filaTiempo = i + 1;
+        break;
+      }
+    }
+
+    if (filaTiempo === -1) {
+      // Si no existe registro de tiempo, crear uno nuevo
+      filaTiempo = tiemposSheet.getLastRow() + 1;
+      tiemposSheet.getRange(filaTiempo, 1).setValue(tareaID);
+      tiemposSheet.getRange(filaTiempo, 2).setValue(nombrePersona);
+      tiemposSheet.getRange(filaTiempo, 6).setValue("60 min"); // Tiempo estimado por defecto
+    }
+
+    // 4. Actualizar tiempos
+    const ahora = new Date();
+    const horaInicio = tiemposSheet.getRange(filaTiempo, 3).getValue() || ahora.toLocaleTimeString("es-MX");
+
+    tiemposSheet.getRange(filaTiempo, 3).setValue(horaInicio);
+    tiemposSheet.getRange(filaTiempo, 4).setValue(ahora.toLocaleTimeString("es-MX"));
+    tiemposSheet.getRange(filaTiempo, 5).setValue(`${minutosReales} min`);
+
+    // Obtener tiempo estimado
+    const tiempoEstimadoStr = tiemposSheet.getRange(filaTiempo, 6).getValue() || "60 min";
+    const tiempoEstimado = parsearMinutos(tiempoEstimadoStr);
+
+    // Calcular variación
+    const variacion = minutosReales - tiempoEstimado;
+    const variacionStr = variacion > 0 ? `+${variacion} min` : `${variacion} min`;
+
+    tiemposSheet.getRange(filaTiempo, 7).setValue(variacionStr);
+    tiemposSheet.getRange(filaTiempo, 8).setValue("✅");
+
+    // 5. Registrar en historial
+    const ultimaFilaHistorial = historialSheet.getLastRow() + 1;
+
+    historialSheet.getRange(ultimaFilaHistorial, 1).setValue(ahora);
+    historialSheet.getRange(ultimaFilaHistorial, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(ultimaFilaHistorial, 3).setValue("Tarea Completada");
+    historialSheet.getRange(ultimaFilaHistorial, 4).setValue(tareaID);
+    historialSheet.getRange(ultimaFilaHistorial, 5).setValue("Completada");
+    historialSheet.getRange(ultimaFilaHistorial, 6).setValue(nombrePersona);
+    historialSheet.getRange(ultimaFilaHistorial, 7).setValue(nombrePersona);
+    historialSheet.getRange(ultimaFilaHistorial, 8).setValue(datosTarea[2]); // Área
+    historialSheet.getRange(ultimaFilaHistorial, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(ultimaFilaHistorial, 10).setValue("✅");
+
+    // 6. Actualizar eficiencia de la persona
+    actualizarEficienciaPersona(nombrePersona);
+
+    // 7. Actualizar panel de control
+    actualizarPanelControl();
+
+    console.log(`✅ Tarea ${tareaID} completada por ${nombrePersona} en ${minutosReales} minutos`);
+
+  } catch (e) {
+    console.log(`Error marcando tarea completada: ${e.message}`);
+    throw e;
   }
 }
 
