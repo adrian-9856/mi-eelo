@@ -666,6 +666,7 @@ function onOpen() {
     .addItem("📊 Actualizar Panel Control", "actualizarPanelControlUI")
     .addSeparator()
     .addItem("🔧 Setup Completo", "setupSistemaCompleto")
+    .addItem("🗑️ Eliminar Datos de Ejemplo", "eliminarDatosEjemplo")
     .addToUi();
 
   ui.createMenu("⚙️ HERRAMIENTAS")
@@ -1486,6 +1487,137 @@ function mostrarAyuda() {
     "Crea reporte diario\n\n" +
     "Ve a 📖 Instrucciones para más"
   );
+}
+
+// ==================== ELIMINAR DATOS DE EJEMPLO ====================
+
+function eliminarDatosEjemplo() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Confirmación 1: Advertencia
+  const confirm1 = ui.alert(
+    "⚠️ ELIMINAR DATOS DE EJEMPLO\n\n" +
+    "Esta acción eliminará TODOS los datos de ejemplo:\n\n" +
+    "• Personas (excepto encabezados)\n" +
+    "• Tareas de ejemplo\n" +
+    "• Registros de tiempos\n" +
+    "• Reparaciones\n" +
+    "• Historial completo\n\n" +
+    "El sistema quedará VACÍO y listo para producción.\n\n" +
+    "¿Deseas continuar?",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm1 !== ui.Button.YES) {
+    ui.alert("❌ Cancelado - No se eliminaron los datos");
+    return;
+  }
+
+  // Confirmación 2: Doble verificación
+  const confirm2 = ui.alert(
+    "🔴 ÚLTIMA CONFIRMACIÓN\n\n" +
+    "¿Estás COMPLETAMENTE SEGURO?\n\n" +
+    "Esta acción NO se puede deshacer.\n\n" +
+    "Para recuperar los datos de ejemplo tendrás que\n" +
+    "ejecutar el Setup Completo nuevamente.",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm2 !== ui.Button.YES) {
+    ui.alert("❌ Cancelado - No se eliminaron los datos");
+    return;
+  }
+
+  try {
+    console.log("🗑️ Eliminando datos de ejemplo...");
+
+    // 1. Limpiar Personas (dejar solo encabezados)
+    const personasSheet = SS.getSheetByName("👥 Personas");
+    const ultimaFilaPersonas = personasSheet.getLastRow();
+    if (ultimaFilaPersonas > 1) {
+      personasSheet.deleteRows(2, ultimaFilaPersonas - 1);
+      console.log("  ✓ Personas limpiadas");
+    }
+
+    // 2. Limpiar Tareas (dejar solo encabezados)
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const ultimaFilaTareas = tareasSheet.getLastRow();
+    if (ultimaFilaTareas > 1) {
+      tareasSheet.deleteRows(2, ultimaFilaTareas - 1);
+      console.log("  ✓ Tareas limpiadas");
+    }
+
+    // 3. Limpiar Tiempos (dejar solo encabezados)
+    const tiemposSheet = SS.getSheetByName("⏱️ Tiempos");
+    const ultimaFilaTiempos = tiemposSheet.getLastRow();
+    if (ultimaFilaTiempos > 1) {
+      tiemposSheet.deleteRows(2, ultimaFilaTiempos - 1);
+      console.log("  ✓ Tiempos limpiados");
+    }
+
+    // 4. Limpiar Reparaciones (dejar solo encabezados)
+    const reparacionesSheet = SS.getSheetByName("🔧 Reparaciones");
+    const ultimaFilaReparaciones = reparacionesSheet.getLastRow();
+    if (ultimaFilaReparaciones > 1) {
+      reparacionesSheet.deleteRows(2, ultimaFilaReparaciones - 1);
+      console.log("  ✓ Reparaciones limpiadas");
+    }
+
+    // 5. Limpiar Historial (dejar solo encabezados)
+    const historialSheet = SS.getSheetByName("📝 Historial");
+    const ultimaFilaHistorial = historialSheet.getLastRow();
+    if (ultimaFilaHistorial > 1) {
+      historialSheet.deleteRows(2, ultimaFilaHistorial - 1);
+      console.log("  ✓ Historial limpiado");
+    }
+
+    // 6. Actualizar Panel Control a ceros
+    const panelSheet = SS.getSheetByName("🎯 Panel Control");
+    panelSheet.getRange("B6").setValue(0);  // Total tareas
+    panelSheet.getRange("B7").setValue(0);  // Completadas
+    panelSheet.getRange("B8").setValue(0);  // Pendientes
+    panelSheet.getRange("B9").setValue(0);  // Con reparación
+    panelSheet.getRange("B10").setValue(0); // Eficiencia promedio
+
+    // Limpiar tareas pendientes del panel
+    panelSheet.getRange("A14:E20").clearContent();
+    console.log("  ✓ Panel Control actualizado");
+
+    // 7. Registrar en Historial que se eliminaron los datos
+    const ahora = new Date();
+    historialSheet.getRange(2, 1).setValue(ahora);
+    historialSheet.getRange(2, 2).setValue(ahora.toLocaleTimeString("es-MX"));
+    historialSheet.getRange(2, 3).setValue("Sistema Limpiado");
+    historialSheet.getRange(2, 4).setValue("-");
+    historialSheet.getRange(2, 5).setValue("Limpieza");
+    historialSheet.getRange(2, 6).setValue("-");
+    historialSheet.getRange(2, 7).setValue("-");
+    historialSheet.getRange(2, 8).setValue("Datos de ejemplo eliminados");
+    historialSheet.getRange(2, 9).setValue(Session.getActiveUser().getEmail());
+    historialSheet.getRange(2, 10).setValue("✅ Sistema listo");
+
+    console.log("✅ Datos de ejemplo eliminados correctamente");
+
+    ui.alert(
+      "✅ DATOS ELIMINADOS CORRECTAMENTE\n\n" +
+      "El sistema ha sido limpiado:\n\n" +
+      "✓ Personas: VACÍO\n" +
+      "✓ Tareas: VACÍO\n" +
+      "✓ Tiempos: VACÍO\n" +
+      "✓ Reparaciones: VACÍO\n" +
+      "✓ Historial: Registro de limpieza\n" +
+      "✓ Panel Control: Actualizado a 0\n\n" +
+      "🎯 Sistema listo para producción!\n\n" +
+      "Ahora puedes:\n" +
+      "1. Agregar tus personas reales en la hoja '👥 Personas'\n" +
+      "2. Comenzar a asignar tareas desde el menú\n" +
+      "3. El sistema registrará todo desde cero"
+    );
+
+  } catch (e) {
+    console.log(`❌ Error eliminando datos: ${e.message}`);
+    ui.alert(`❌ Error: ${e.message}\n\nAlgunos datos podrían no haberse eliminado correctamente.`);
+  }
 }
 
 // ==================== REPORTES Y AUTOMATIZACIONES ====================
