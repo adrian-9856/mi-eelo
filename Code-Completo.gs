@@ -682,165 +682,187 @@ function onOpen() {
 // ==================== FUNCIÓN: ASIGNAR NUEVA TAREA ====================
 
 function btnAsignarTarea() {
-  const ui = SpreadsheetApp.getUi();
+  mostrarFormularioAsignacion();
+}
 
-  // PASO 1: Descripción
-  const response1 = ui.prompt(
-    "➕ ASIGNAR NUEVA TAREA\n\n" +
-    "Descripción de la tarea (ej: Confección Camisetas):",
-    ui.ButtonSet.OK_CANCEL
-  );
+function mostrarFormularioAsignacion() {
+  const html = HtmlService.createHtmlOutput(getFormularioHTML())
+    .setWidth(500)
+    .setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, '➕ ASIGNAR NUEVA TAREA');
+}
 
-  if (response1.getSelectedButton() !== ui.Button.OK) return;
-  const descripcion = response1.getResponseText().trim();
-
-  if (!descripcion) {
-    ui.alert("❌ Debes ingresar una descripción");
-    return;
-  }
-
-  // PASO 2: Cantidad
-  const response2 = ui.prompt(
-    "➕ ASIGNAR NUEVA TAREA\n\n" +
-    "Cantidad (ej: 1000):",
-    ui.ButtonSet.OK_CANCEL
-  );
-
-  if (response2.getSelectedButton() !== ui.Button.OK) return;
-  const cantidad = parseInt(response2.getResponseText().trim());
-
-  if (isNaN(cantidad) || cantidad <= 0) {
-    ui.alert("❌ Debes ingresar una cantidad válida");
-    return;
-  }
-
-  // PASO 3: Seleccionar Área (DESPLEGABLE)
-  const responseArea = ui.alert(
-    "➕ ASIGNAR NUEVA TAREA - Selecciona Área\n\n" +
-    "Confección = SÍ\n" +
-    "Serigrafía = NO\n" +
-    "Planchado/Empaque = CANCELAR para más opciones",
-    ui.ButtonSet.YES_NO_CANCEL
-  );
-
-  let area = "";
-  if (responseArea === ui.Button.YES) {
-    area = "Confección";
-  } else if (responseArea === ui.Button.NO) {
-    area = "Serigrafía";
-  } else {
-    // Segunda opción: Planchado o Empaque
-    const responseArea2 = ui.alert(
-      "➕ ASIGNAR NUEVA TAREA - Selecciona Área\n\n" +
-      "Planchado = SÍ\n" +
-      "Empaque = NO",
-      ui.ButtonSet.YES_NO_CANCEL
-    );
-
-    if (responseArea2 === ui.Button.YES) {
-      area = "Planchado";
-    } else if (responseArea2 === ui.Button.NO) {
-      area = "Empaque";
-    } else {
-      ui.alert("❌ Cancelado");
-      return;
-    }
-  }
-
-  // PASO 4: Seleccionar Persona (DESPLEGABLE)
+function getFormularioHTML() {
+  // Obtener personas desde la hoja
   const personasSheet = SS.getSheetByName("👥 Personas");
   const personasData = personasSheet.getDataRange().getValues();
 
-  let personasLista = [];
+  let opcionesPersonas = '';
   for (let i = 1; i < personasData.length; i++) {
     const nombre = personasData[i][1];
     const carga = personasData[i][5];
     if (nombre) {
-      personasLista.push({ nombre: nombre, carga: carga });
+      opcionesPersonas += `<option value="${nombre}">${nombre} - ${carga}</option>`;
     }
   }
 
-  // Mostrar primeras 3 personas
-  const response4 = ui.alert(
-    `➕ ASIGNAR NUEVA TAREA - Selecciona Persona\n\n` +
-    `SÍ = ${personasLista[0]?.nombre || "N/A"} (${personasLista[0]?.carga || ""})\n` +
-    `NO = ${personasLista[1]?.nombre || "N/A"} (${personasLista[1]?.carga || ""})\n` +
-    `CANCELAR = Ver más opciones`,
-    ui.ButtonSet.YES_NO_CANCEL
-  );
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .form-group {
+            margin-bottom: 20px;
+          }
+          label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1f4d7f;
+          }
+          input[type="text"],
+          input[type="number"],
+          select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+          }
+          select {
+            cursor: pointer;
+            background-color: white;
+          }
+          input:focus,
+          select:focus {
+            border-color: #1f4d7f;
+            outline: none;
+          }
+          .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+          .btn-primary {
+            background-color: #1f4d7f;
+            color: white;
+          }
+          .btn-primary:hover {
+            background-color: #163a5f;
+          }
+          .btn-secondary {
+            background-color: #ccc;
+            color: #333;
+          }
+          .btn-secondary:hover {
+            background-color: #999;
+          }
+          .buttons {
+            margin-top: 30px;
+            text-align: center;
+          }
+          .titulo {
+            color: #1f4d7f;
+            margin-bottom: 20px;
+            font-size: 20px;
+          }
+          .required {
+            color: red;
+          }
+        </style>
+      </head>
+      <body>
+        <h2 class="titulo">📋 Nueva Tarea de Producción</h2>
 
-  let persona = "";
-  if (response4 === ui.Button.YES) {
-    persona = personasLista[0]?.nombre || "";
-  } else if (response4 === ui.Button.NO) {
-    persona = personasLista[1]?.nombre || "";
-  } else {
-    // Mostrar más personas
-    const response5 = ui.alert(
-      `➕ ASIGNAR NUEVA TAREA - Más Personas\n\n` +
-      `SÍ = ${personasLista[2]?.nombre || "N/A"} (${personasLista[2]?.carga || ""})\n` +
-      `NO = ${personasLista[3]?.nombre || "N/A"} (${personasLista[3]?.carga || ""})\n` +
-      `CANCELAR = Ver más`,
-      ui.ButtonSet.YES_NO_CANCEL
-    );
+        <form id="formulario">
+          <div class="form-group">
+            <label for="operacion">Nombre de la Operación <span class="required">*</span></label>
+            <input type="text" id="operacion" name="operacion" placeholder="Ej: Confección Camisetas" required>
+          </div>
 
-    if (response5 === ui.Button.YES) {
-      persona = personasLista[2]?.nombre || "";
-    } else if (response5 === ui.Button.NO) {
-      persona = personasLista[3]?.nombre || "";
-    } else {
-      // Últimas opciones
-      const response6 = ui.alert(
-        `➕ ASIGNAR NUEVA TAREA - Últimas Opciones\n\n` +
-        `SÍ = ${personasLista[4]?.nombre || "N/A"} (${personasLista[4]?.carga || ""})\n` +
-        `NO = ${personasLista[5]?.nombre || "N/A"} (${personasLista[5]?.carga || ""})`,
-        ui.ButtonSet.YES_NO_CANCEL
-      );
+          <div class="form-group">
+            <label for="area">Área <span class="required">*</span></label>
+            <select id="area" name="area" required>
+              <option value="">-- Selecciona un área --</option>
+              <option value="Confección">Confección</option>
+              <option value="Serigrafía">Serigrafía</option>
+              <option value="Planchado">Planchado</option>
+              <option value="Empaque">Empaque</option>
+            </select>
+          </div>
 
-      if (response6 === ui.Button.YES) {
-        persona = personasLista[4]?.nombre || "";
-      } else if (response6 === ui.Button.NO) {
-        persona = personasLista[5]?.nombre || "";
-      } else {
-        ui.alert("❌ Cancelado");
-        return;
-      }
-    }
-  }
+          <div class="form-group">
+            <label for="persona">Asignar a <span class="required">*</span></label>
+            <select id="persona" name="persona" required>
+              <option value="">-- Selecciona una persona --</option>
+              ${opcionesPersonas}
+            </select>
+          </div>
 
-  if (!persona) {
-    ui.alert("❌ Debe seleccionar una persona");
-    return;
-  }
+          <div class="form-group">
+            <label for="cantidad">Cantidad <span class="required">*</span></label>
+            <input type="number" id="cantidad" name="cantidad" placeholder="Ej: 1000" min="1" required>
+          </div>
 
-  // CONFIRMAR (SIN PRIORIDAD)
-  const confirm = ui.alert(
-    `✅ RESUMEN DE NUEVA TAREA\n\n` +
-    `Descripción: ${descripcion}\n` +
-    `Cantidad: ${cantidad}\n` +
-    `Área: ${area}\n` +
-    `Persona: ${persona}\n\n` +
-    `¿Confirmar asignación?`,
-    ui.ButtonSet.YES_NO
-  );
+          <div class="buttons">
+            <button type="submit" class="btn btn-primary">✅ Asignar Tarea</button>
+            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">❌ Cancelar</button>
+          </div>
+        </form>
 
-  if (confirm !== ui.Button.YES) {
-    ui.alert("❌ Cancelado");
-    return;
-  }
+        <script>
+          document.getElementById('formulario').addEventListener('submit', function(e) {
+            e.preventDefault();
 
-  // CREAR TAREA (SIN PRIORIDAD)
-  crearNuevaTarea(descripcion, cantidad, area, persona);
+            const operacion = document.getElementById('operacion').value.trim();
+            const area = document.getElementById('area').value;
+            const persona = document.getElementById('persona').value;
+            const cantidad = parseInt(document.getElementById('cantidad').value);
 
-  ui.alert(
-    `✅ TAREA ASIGNADA CORRECTAMENTE\n\n` +
-    `Descripción: ${descripcion}\n` +
-    `Persona: ${persona}\n` +
-    `Área: ${area}\n` +
-    `Cantidad: ${cantidad}\n\n` +
-    `✓ Registrada en el sistema\n` +
-    `✓ Añadida al Historial`
-  );
+            if (!operacion || !area || !persona || !cantidad) {
+              alert('❌ Por favor completa todos los campos');
+              return;
+            }
+
+            // Deshabilitar botón para evitar doble envío
+            document.querySelector('.btn-primary').disabled = true;
+            document.querySelector('.btn-primary').textContent = '⏳ Asignando...';
+
+            // Enviar datos a Google Apps Script
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ TAREA ASIGNADA CORRECTAMENTE\\n\\n' +
+                      'Operación: ' + operacion + '\\n' +
+                      'Área: ' + area + '\\n' +
+                      'Persona: ' + persona + '\\n' +
+                      'Cantidad: ' + cantidad);
+                google.script.host.close();
+              })
+              .withFailureHandler(function(error) {
+                alert('❌ Error: ' + error);
+                document.querySelector('.btn-primary').disabled = false;
+                document.querySelector('.btn-primary').textContent = '✅ Asignar Tarea';
+              })
+              .procesarNuevaTarea(operacion, cantidad, area, persona);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function procesarNuevaTarea(operacion, cantidad, area, persona) {
+  crearNuevaTarea(operacion, cantidad, area, persona);
 }
 
 function crearNuevaTarea(descripcion, cantidad, area, persona) {
