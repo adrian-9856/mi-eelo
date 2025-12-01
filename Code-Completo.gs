@@ -232,34 +232,34 @@ function configurarTareas() {
   const sheet = SS.getSheetByName("📋 Tareas");
   sheet.clearContents();
 
-  const anchos = [90, 140, 110, 180, 90, 110, 130, 90, 130, 180];
+  const anchos = [90, 140, 110, 180, 90, 110, 130, 130, 180];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
-  const encabezados = ["Tarea ID", "Persona Asignada", "Área", "Descripción", "Cantidad", "Fecha", "Estado", "Prioridad", "Reasignable", "Notas"];
-  sheet.getRange("A1:J1").setValues([encabezados]);
-  sheet.getRange("A1:J1").setBackground("#d9b919");
-  sheet.getRange("A1:J1").setFontWeight("bold");
-  sheet.getRange("A1:J1").setBorder(true, true, true, true, true, true);
+  const encabezados = ["Tarea ID", "Persona Asignada", "Área", "Descripción", "Cantidad", "Fecha", "Estado", "Reasignable", "Notas"];
+  sheet.getRange("A1:I1").setValues([encabezados]);
+  sheet.getRange("A1:I1").setBackground("#d9b919");
+  sheet.getRange("A1:I1").setFontWeight("bold");
+  sheet.getRange("A1:I1").setBorder(true, true, true, true, true, true);
   sheet.setRowHeight(1, 25);
 
   const today = new Date();
   const datos = [
-    ["T001", "Juan García", "Confección", "Confección Camisetas", 1500, today, "En Progreso", "Alta", "NO", "75% completado"],
-    ["T002", "María López", "Serigrafía", "Serigrafía Logo", 1500, today, "Completada", "Alta", "NO", "Finalizado"],
-    ["T003", "Carlos Ruiz", "Planchado", "Planchado de Prendas", 500, today, "🔴 PENDIENTE", "Alta", "SI", "Sin iniciar"],
-    ["T004", "Ana Martínez", "Empaque", "Empaque Final", 500, today, "🔴 PENDIENTE", "Media", "SI", "Requiere reasignación"]
+    ["T001", "Juan García", "Confección", "Confección Camisetas", 1500, today, "En Progreso", "NO", "75% completado"],
+    ["T002", "María López", "Serigrafía", "Serigrafía Logo", 1500, today, "Completada", "NO", "Finalizado"],
+    ["T003", "Carlos Ruiz", "Planchado", "Planchado de Prendas", 500, today, "🔴 PENDIENTE", "SI", "Sin iniciar"],
+    ["T004", "Ana Martínez", "Empaque", "Empaque Final", 500, today, "🔴 PENDIENTE", "SI", "Requiere reasignación"]
   ];
 
-  sheet.getRange("A2:J5").setValues(datos);
-  sheet.getRange("A2:J5").setBorder(true, true, true, true, true, true);
+  sheet.getRange("A2:I5").setValues(datos);
+  sheet.getRange("A2:I5").setBorder(true, true, true, true, true, true);
   sheet.getRange("F2:F5").setNumberFormat("yyyy-mm-dd");
 
   for (let i = 0; i < datos.length; i++) {
     const fila = i + 2;
     if (datos[i][6].includes("PENDIENTE")) {
-      sheet.getRange(`A${fila}:J${fila}`).setBackground("#ffcccc");
+      sheet.getRange(`A${fila}:I${fila}`).setBackground("#ffcccc");
     } else if (i % 2 === 0) {
-      sheet.getRange(`A${fila}:J${fila}`).setBackground("#f9f9f9");
+      sheet.getRange(`A${fila}:I${fila}`).setBackground("#f9f9f9");
     }
   }
 
@@ -714,56 +714,112 @@ function btnAsignarTarea() {
     return;
   }
 
-  // PASO 3: Seleccionar Área
-  const response3 = ui.prompt(
-    "➕ ASIGNAR NUEVA TAREA\n\n" +
-    "Área (Confección / Serigrafía / Planchado / Empaque):",
-    ui.ButtonSet.OK_CANCEL
+  // PASO 3: Seleccionar Área (DESPLEGABLE)
+  const responseArea = ui.alert(
+    "➕ ASIGNAR NUEVA TAREA - Selecciona Área\n\n" +
+    "Confección = SÍ\n" +
+    "Serigrafía = NO\n" +
+    "Planchado/Empaque = CANCELAR para más opciones",
+    ui.ButtonSet.YES_NO_CANCEL
   );
 
-  if (response3.getSelectedButton() !== ui.Button.OK) return;
-  const area = response3.getResponseText().trim();
+  let area = "";
+  if (responseArea === ui.Button.YES) {
+    area = "Confección";
+  } else if (responseArea === ui.Button.NO) {
+    area = "Serigrafía";
+  } else {
+    // Segunda opción: Planchado o Empaque
+    const responseArea2 = ui.alert(
+      "➕ ASIGNAR NUEVA TAREA - Selecciona Área\n\n" +
+      "Planchado = SÍ\n" +
+      "Empaque = NO",
+      ui.ButtonSet.YES_NO_CANCEL
+    );
 
-  // PASO 4: Seleccionar Persona
-  const personasSheet = SS.getSheetByName("👥 Personas");
-  const personasData = personasSheet.getDataRange().getValues();
-
-  let personas = [];
-  for (let i = 1; i < personasData.length; i++) {
-    const nombre = personasData[i][1];
-    const carga = personasData[i][7];
-    if (nombre) {
-      personas.push(`${nombre} (${carga})`);
+    if (responseArea2 === ui.Button.YES) {
+      area = "Planchado";
+    } else if (responseArea2 === ui.Button.NO) {
+      area = "Empaque";
+    } else {
+      ui.alert("❌ Cancelado");
+      return;
     }
   }
 
-  const response4 = ui.prompt(
-    `➕ ASIGNAR NUEVA TAREA\n\n` +
-    `Selecciona persona:\n\n${personas.join("\n")}`,
-    ui.ButtonSet.OK_CANCEL
+  // PASO 4: Seleccionar Persona (DESPLEGABLE)
+  const personasSheet = SS.getSheetByName("👥 Personas");
+  const personasData = personasSheet.getDataRange().getValues();
+
+  let personasLista = [];
+  for (let i = 1; i < personasData.length; i++) {
+    const nombre = personasData[i][1];
+    const carga = personasData[i][5];
+    if (nombre) {
+      personasLista.push({ nombre: nombre, carga: carga });
+    }
+  }
+
+  // Mostrar primeras 3 personas
+  const response4 = ui.alert(
+    `➕ ASIGNAR NUEVA TAREA - Selecciona Persona\n\n` +
+    `SÍ = ${personasLista[0]?.nombre || "N/A"} (${personasLista[0]?.carga || ""})\n` +
+    `NO = ${personasLista[1]?.nombre || "N/A"} (${personasLista[1]?.carga || ""})\n` +
+    `CANCELAR = Ver más opciones`,
+    ui.ButtonSet.YES_NO_CANCEL
   );
 
-  if (response4.getSelectedButton() !== ui.Button.OK) return;
-  const persona = response4.getResponseText().split("(")[0].trim();
+  let persona = "";
+  if (response4 === ui.Button.YES) {
+    persona = personasLista[0]?.nombre || "";
+  } else if (response4 === ui.Button.NO) {
+    persona = personasLista[1]?.nombre || "";
+  } else {
+    // Mostrar más personas
+    const response5 = ui.alert(
+      `➕ ASIGNAR NUEVA TAREA - Más Personas\n\n` +
+      `SÍ = ${personasLista[2]?.nombre || "N/A"} (${personasLista[2]?.carga || ""})\n` +
+      `NO = ${personasLista[3]?.nombre || "N/A"} (${personasLista[3]?.carga || ""})\n` +
+      `CANCELAR = Ver más`,
+      ui.ButtonSet.YES_NO_CANCEL
+    );
 
-  // PASO 5: Prioridad
-  const response5 = ui.alert(
-    "➕ ASIGNAR NUEVA TAREA\n\n" +
-    "¿Prioridad ALTA?\n\n" +
-    "SÍ = Alta\nNO = Media",
-    ui.ButtonSet.YES_NO
-  );
+    if (response5 === ui.Button.YES) {
+      persona = personasLista[2]?.nombre || "";
+    } else if (response5 === ui.Button.NO) {
+      persona = personasLista[3]?.nombre || "";
+    } else {
+      // Últimas opciones
+      const response6 = ui.alert(
+        `➕ ASIGNAR NUEVA TAREA - Últimas Opciones\n\n` +
+        `SÍ = ${personasLista[4]?.nombre || "N/A"} (${personasLista[4]?.carga || ""})\n` +
+        `NO = ${personasLista[5]?.nombre || "N/A"} (${personasLista[5]?.carga || ""})`,
+        ui.ButtonSet.YES_NO_CANCEL
+      );
 
-  const prioridad = response5 === ui.Button.YES ? "Alta" : "Media";
+      if (response6 === ui.Button.YES) {
+        persona = personasLista[4]?.nombre || "";
+      } else if (response6 === ui.Button.NO) {
+        persona = personasLista[5]?.nombre || "";
+      } else {
+        ui.alert("❌ Cancelado");
+        return;
+      }
+    }
+  }
 
-  // CONFIRMAR
+  if (!persona) {
+    ui.alert("❌ Debe seleccionar una persona");
+    return;
+  }
+
+  // CONFIRMAR (SIN PRIORIDAD)
   const confirm = ui.alert(
     `✅ RESUMEN DE NUEVA TAREA\n\n` +
     `Descripción: ${descripcion}\n` +
     `Cantidad: ${cantidad}\n` +
     `Área: ${area}\n` +
-    `Persona: ${persona}\n` +
-    `Prioridad: ${prioridad}\n\n` +
+    `Persona: ${persona}\n\n` +
     `¿Confirmar asignación?`,
     ui.ButtonSet.YES_NO
   );
@@ -773,20 +829,21 @@ function btnAsignarTarea() {
     return;
   }
 
-  // CREAR TAREA
-  crearNuevaTarea(descripcion, cantidad, area, persona, prioridad);
+  // CREAR TAREA (SIN PRIORIDAD)
+  crearNuevaTarea(descripcion, cantidad, area, persona);
 
   ui.alert(
     `✅ TAREA ASIGNADA CORRECTAMENTE\n\n` +
     `Descripción: ${descripcion}\n` +
     `Persona: ${persona}\n` +
+    `Área: ${area}\n` +
     `Cantidad: ${cantidad}\n\n` +
     `✓ Registrada en el sistema\n` +
     `✓ Añadida al Historial`
   );
 }
 
-function crearNuevaTarea(descripcion, cantidad, area, persona, prioridad) {
+function crearNuevaTarea(descripcion, cantidad, area, persona) {
   try {
     const tareasSheet = SS.getSheetByName("📋 Tareas");
     const historialSheet = SS.getSheetByName("📝 Historial");
@@ -806,9 +863,8 @@ function crearNuevaTarea(descripcion, cantidad, area, persona, prioridad) {
     tareasSheet.getRange(nuevaFila, 5).setValue(cantidad);
     tareasSheet.getRange(nuevaFila, 6).setValue(today);
     tareasSheet.getRange(nuevaFila, 7).setValue("En Progreso");
-    tareasSheet.getRange(nuevaFila, 8).setValue(prioridad);
-    tareasSheet.getRange(nuevaFila, 9).setValue("SI");
-    tareasSheet.getRange(nuevaFila, 10).setValue("Tarea nueva asignada");
+    tareasSheet.getRange(nuevaFila, 8).setValue("SI");
+    tareasSheet.getRange(nuevaFila, 9).setValue("Tarea nueva asignada");
 
     // Registrar en Historial
     const ultimaFilaHistorial = historialSheet.getLastRow() + 1;
@@ -837,11 +893,10 @@ function crearNuevaTarea(descripcion, cantidad, area, persona, prioridad) {
         <p><strong>Descripción:</strong> ${descripcion}</p>
         <p><strong>Cantidad:</strong> ${cantidad}</p>
         <p><strong>Área:</strong> ${area}</p>
-        <p><strong>Prioridad:</strong> ${prioridad}</p>
 
         <p style="margin-top: 20px; color: #666;">
           <strong>Hora:</strong> ${ahora.toLocaleString("es-MX")}<br>
-          <strong>Sistema:</strong> Producción Automático
+          <strong>Sistema:</strong> Producción Automático - Control de Tiempos
         </p>
       </body>
     </html>
@@ -1279,8 +1334,7 @@ function buscarTarea() {
         `Descripción: ${info[3]}\n` +
         `Cantidad: ${info[4]}\n` +
         `Estado: ${info[6]}\n` +
-        `Prioridad: ${info[7]}\n` +
-        `Notas: ${info[9] || "Sin notas"}`
+        `Notas: ${info[8] || "Sin notas"}`
       );
       return;
     }
