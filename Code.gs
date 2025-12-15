@@ -39,20 +39,26 @@ function setupSistemaCompleto() {
     Utilities.sleep(500);
 
     aplicarFormatosGlobales();
+    ocultarHojasTecnicas();  // Nueva función para ocultar hojas técnicas
+    organizarOrdenHojas();    // Nueva función para organizar el orden
     crearTriggers();
     onOpen();
 
     SpreadsheetApp.getUi().alert(
       "✅ SISTEMA INSTALADO CORRECTAMENTE\n\n" +
-      "✓ 11 Hojas creadas\n" +
-      "✓ Todos los datos cargados\n" +
-      "✓ Formatos perfectos\n" +
-      "✓ AUTOMATIZACIONES ACTIVAS:\n" +
-      "  • Asignación de tareas\n" +
+      "El sistema MI-EELO está listo para usar:\n\n" +
+      "📋 HOJAS PRINCIPALES:\n" +
+      "  • Panel Control - Resumen general\n" +
+      "  • Personas - Gestión de operarios\n" +
+      "  • Tareas - Control de producción\n" +
+      "  • Indicadores - Métricas clave\n\n" +
+      "🔄 MENÚS DISPONIBLES:\n" +
+      "  • REASIGNACIONES - Asignar y completar tareas\n" +
+      "  • HERRAMIENTAS - Reportes y análisis\n\n" +
+      "⚡ AUTOMATIZACIONES ACTIVAS:\n" +
+      "  • Cálculo automático de eficiencias\n" +
       "  • Notificaciones por correo\n" +
-      "  • Reasignación inteligente\n" +
-      "  • Reportes automáticos\n" +
-      "  • Alertas de pendientes\n\n" +
+      "  • Reportes diarios\n\n" +
       "🎯 ¡Sistema listo para producción!"
     );
 
@@ -193,7 +199,8 @@ function configurarPersonas() {
   const sheet = SS.getSheetByName("👥 Personas");
   sheet.clearContents();
 
-  const anchos = [50, 130, 100, 120, 110, 140, 100, 200];
+  // Anchos optimizados: ID pequeño, Nombre y Rol más anchos
+  const anchos = [50, 150, 100, 120, 100, 100, 100, 150];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
   const encabezados = ["ID", "Nombre", "Turno", "Área", "Eficiencia (%)", "Carga", "Estado", "Rol"];
@@ -232,7 +239,8 @@ function configurarTareas() {
   const sheet = SS.getSheetByName("📋 Tareas");
   sheet.clearContents();
 
-  const anchos = [90, 140, 110, 180, 90, 110, 130, 130, 180];
+  // Anchos optimizados para mejor legibilidad
+  const anchos = [80, 140, 110, 200, 90, 110, 120, 100, 200];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
   const encabezados = ["Tarea ID", "Persona Asignada", "Área", "Descripción", "Cantidad", "Fecha", "Estado", "Reasignable", "Notas"];
@@ -332,10 +340,11 @@ function configurarHistorial() {
   const sheet = SS.getSheetByName("📝 Historial");
   sheet.clearContents();
 
-  const anchos = [120, 100, 140, 90, 150, 140, 140, 180, 150, 100];
+  // Anchos optimizados para mejor visualización
+  const anchos = [110, 90, 130, 80, 130, 130, 130, 200, 120, 80];
   anchos.forEach((ancho, i) => sheet.setColumnWidth(i + 1, ancho));
 
-  const encabezados = ["Fecha", "Hora", "Tipo", "Tarea ID", "Tipo Evento", "De", "Para", "Detalle", "Usuario", "Estado"];
+  const encabezados = ["Fecha", "Hora", "Tipo", "Tarea", "Evento", "De", "Para", "Detalle", "Usuario", "Estado"];
   sheet.getRange("A1:J1").setValues([encabezados]);
   sheet.getRange("A1:J1").setBackground("#33b0e0");
   sheet.getRange("A1:J1").setFontColor("white");
@@ -354,6 +363,9 @@ function configurarHistorial() {
   sheet.getRange("A2:J5").setValues(datos);
   sheet.getRange("A2:J5").setBorder(true, true, true, true, true, true);
   sheet.getRange("A2:A5").setNumberFormat("yyyy-mm-dd");
+
+  // Aplicar formato de texto envuelto para columna de Detalle
+  sheet.getRange("H:H").setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
 
   console.log("  ✓ Historial");
 }
@@ -614,6 +626,69 @@ function aplicarFormatosGlobales() {
     console.log("  ✓ Formatos globales");
   } catch (e) {
     console.log(`  ⚠️ Error formatos: ${e.message}`);
+  }
+}
+
+// ==================== OPTIMIZACIÓN DE HOJAS ====================
+
+/**
+ * Oculta hojas técnicas que el usuario final no necesita ver
+ */
+function ocultarHojasTecnicas() {
+  try {
+    const hojasOcultar = ["📖 Instrucciones", "⚙️ Configuración"];
+
+    hojasOcultar.forEach(nombreHoja => {
+      const hoja = SS.getSheetByName(nombreHoja);
+      if (hoja) {
+        hoja.hideSheet();
+        console.log(`  ✓ ${nombreHoja} ocultada`);
+      }
+    });
+
+    console.log("  ✓ Hojas técnicas ocultadas");
+  } catch (e) {
+    console.log(`  ⚠️ Error ocultando hojas: ${e.message}`);
+  }
+}
+
+/**
+ * Organiza el orden de las hojas para mejor experiencia de usuario
+ * Orden: Panel Control > Personas > Tareas > Indicadores > resto...
+ */
+function organizarOrdenHojas() {
+  try {
+    const ordenPreferido = [
+      "🎯 Panel Control",
+      "👥 Personas",
+      "📋 Tareas",
+      "📈 Indicadores",
+      "⏱️ Tiempos",
+      "📝 Historial",
+      "🔧 Reparaciones",
+      "🔄 Reasignaciones",
+      "📊 Reportes",
+      "📖 Instrucciones",  // Oculta
+      "⚙️ Configuración"   // Oculta
+    ];
+
+    ordenPreferido.forEach((nombreHoja, index) => {
+      const hoja = SS.getSheetByName(nombreHoja);
+      if (hoja) {
+        SS.setActiveSheet(hoja);
+        SS.moveActiveSheet(index + 1);
+      }
+    });
+
+    // Establecer Panel Control como hoja activa inicial
+    const panelControl = SS.getSheetByName("🎯 Panel Control");
+    if (panelControl) {
+      SS.setActiveSheet(panelControl);
+    }
+
+    console.log("  ✓ Orden de hojas optimizado");
+  } catch (e) {
+    console.log(`  ⚠️ Error organizando hojas: ${e.message}`);
   }
 }
 
