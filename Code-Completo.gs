@@ -1627,118 +1627,243 @@ function btnDetectarTodosPendientes() {
 }
 
 function btnReasignarSeleccionada() {
-  const ui = SpreadsheetApp.getUi();
+  mostrarFormularioReasignacion();
+}
+
+function mostrarFormularioReasignacion() {
+  const html = HtmlService.createHtmlOutput(getFormularioReasignacionHTML())
+    .setWidth(550)
+    .setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔄 REASIGNAR TAREA');
+}
+
+function getFormularioReasignacionHTML() {
+  // Obtener tareas pendientes o en progreso
   const tareasSheet = SS.getSheetByName("📋 Tareas");
+  const tareasData = tareasSheet.getDataRange().getValues();
 
-  const response = ui.prompt(
-    "🔄 REASIGNACIÓN MANUAL\n\n" +
-    "Ingresa el ID de la tarea (ej: T003):",
-    ui.ButtonSet.OK_CANCEL
-  );
+  let opcionesTareas = '';
+  for (let i = 1; i < tareasData.length; i++) {
+    const tareaID = tareasData[i][0];
+    const persona = tareasData[i][1];
+    const descripcion = tareasData[i][3];
+    const estado = tareasData[i][6];
+    const area = tareasData[i][2];
+    const cantidad = tareasData[i][4];
 
-  if (response.getSelectedButton() !== ui.Button.OK) return;
-
-  const tareaID = response.getResponseText().toUpperCase().trim();
-  const datos = tareasSheet.getDataRange().getValues();
-
-  let tareaInfo = null;
-  let filaEncontrada = -1;
-
-  for (let i = 1; i < datos.length; i++) {
-    if (datos[i][0] === tareaID) {
-      tareaInfo = {
-        tareaID: datos[i][0],
-        persona: datos[i][1],
-        descripcion: datos[i][3],
-        area: datos[i][2],
-        cantidad: datos[i][4]
-      };
-      filaEncontrada = i;
-      break;
+    if (tareaID && (estado === "En Progreso" || estado.includes("PENDIENTE"))) {
+      // Formato: tareaID|persona|descripcion|area|cantidad
+      const valor = `${tareaID}|${persona}|${descripcion}|${area}|${cantidad}`;
+      opcionesTareas += `<option value="${valor}">${tareaID} - ${persona} - ${descripcion}</option>`;
     }
   }
 
-  if (!tareaInfo) {
-    ui.alert(`❌ Tarea ${tareaID} no encontrada`);
-    return;
-  }
-
-  const tipoRespuesta = ui.alert(
-    `📌 TAREA: ${tareaID}\n\n` +
-    `Persona: ${tareaInfo.persona}\n` +
-    `Descripción: ${tareaInfo.descripcion}\n` +
-    `Cantidad: ${tareaInfo.cantidad}\n\n` +
-    `¿Qué tipo de reasignación?\n\n` +
-    `SÍ = REPARACIÓN (tiene defectos)\n` +
-    `NO = TAREA SOBRANTE (no terminó)`,
-    ui.ButtonSet.YES_NO
-  );
-
-  const tipo = tipoRespuesta === ui.Button.YES ? "REPARACIÓN" : "TAREA SOBRANTE";
-
+  // Obtener personas desde la hoja
   const personasSheet = SS.getSheetByName("👥 Personas");
   const personasData = personasSheet.getDataRange().getValues();
 
-  let personasDisponibles = [];
+  let opcionesPersonas = '';
   for (let i = 1; i < personasData.length; i++) {
     const nombre = personasData[i][1];
-    const carga = personasData[i][7];
-    if (nombre && carga && carga.includes("BAJO")) {
-      personasDisponibles.push(`${nombre} (${carga} ⭐)`);
+    const carga = personasData[i][5];
+    if (nombre) {
+      opcionesPersonas += `<option value="${nombre}">${nombre} - ${carga}</option>`;
     }
   }
 
-  const personaRespuesta = ui.alert(
-    `¿A quién deseas reasignar?\n\n` +
-    `SÍ = A la misma persona (${tareaInfo.persona})\n` +
-    `NO = A otra persona (disponibles: ${personasDisponibles.join(", ")})`,
-    ui.ButtonSet.YES_NO
-  );
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_top">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .form-group {
+            margin-bottom: 20px;
+          }
+          label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #1f4d7f;
+          }
+          select {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            cursor: pointer;
+            background-color: white;
+          }
+          select:focus {
+            border-color: #1f4d7f;
+            outline: none;
+          }
+          .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+          }
+          .btn-primary {
+            background-color: #d9b919;
+            color: white;
+          }
+          .btn-primary:hover {
+            background-color: #b89815;
+          }
+          .btn-secondary {
+            background-color: #ccc;
+            color: #333;
+          }
+          .btn-secondary:hover {
+            background-color: #999;
+          }
+          .buttons {
+            margin-top: 30px;
+            text-align: center;
+          }
+          .titulo {
+            color: #1f4d7f;
+            margin-bottom: 20px;
+            font-size: 20px;
+          }
+          .required {
+            color: red;
+          }
+          .info-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #d9b919;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <h2 class="titulo">🔄 Reasignar Tarea</h2>
 
-  let nuevaPersona = tareaInfo.persona;
+        <div class="info-box">
+          ⚠️ Selecciona la tarea a reasignar y la nueva persona encargada
+        </div>
 
-  if (personaRespuesta === ui.Button.NO) {
-    const respuesta2 = ui.prompt(
-      `Selecciona nueva persona:\n\n` +
-      `${personasDisponibles.join("\n")}\n\n` +
-      `O escribe otro nombre:`,
-      ui.ButtonSet.OK_CANCEL
-    );
+        <form id="formulario">
+          <div class="form-group">
+            <label for="tarea">Tarea a Reasignar <span class="required">*</span></label>
+            <select id="tarea" name="tarea" required>
+              <option value="">-- Selecciona una tarea --</option>
+              ${opcionesTareas}
+            </select>
+          </div>
 
-    if (respuesta2.getSelectedButton() === ui.Button.OK) {
-      nuevaPersona = respuesta2.getResponseText().split("(")[0].trim();
-    } else {
-      ui.alert("❌ Cancelado");
-      return;
+          <div class="form-group">
+            <label for="tipo">Tipo de Reasignación <span class="required">*</span></label>
+            <select id="tipo" name="tipo" required>
+              <option value="">-- Selecciona el tipo --</option>
+              <option value="REPARACIÓN">🔧 REPARACIÓN (tiene defectos)</option>
+              <option value="TAREA SOBRANTE">📦 TAREA SOBRANTE (no terminó)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="persona">Reasignar a <span class="required">*</span></label>
+            <select id="persona" name="persona" required>
+              <option value="">-- Selecciona una persona --</option>
+              ${opcionesPersonas}
+            </select>
+          </div>
+
+          <div class="buttons">
+            <button type="submit" class="btn btn-primary">✅ Reasignar Tarea</button>
+            <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">❌ Cancelar</button>
+          </div>
+        </form>
+
+        <script>
+          document.getElementById('formulario').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const tareaData = document.getElementById('tarea').value;
+            const tipo = document.getElementById('tipo').value;
+            const nuevaPersona = document.getElementById('persona').value;
+
+            if (!tareaData || !tipo || !nuevaPersona) {
+              alert('❌ Por favor completa todos los campos');
+              return;
+            }
+
+            // Separar los datos de la tarea
+            const [tareaID, personaActual, descripcion, area, cantidad] = tareaData.split('|');
+
+            // Deshabilitar botón para evitar doble envío
+            document.querySelector('.btn-primary').disabled = true;
+            document.querySelector('.btn-primary').textContent = '⏳ Reasignando...';
+
+            // Enviar datos a Google Apps Script
+            google.script.run
+              .withSuccessHandler(function() {
+                alert('✅ TAREA REASIGNADA CORRECTAMENTE\\n\\n' +
+                      'Tarea: ' + tareaID + '\\n' +
+                      'Tipo: ' + tipo + '\\n' +
+                      'De: ' + personaActual + '\\n' +
+                      'Para: ' + nuevaPersona + '\\n\\n' +
+                      '✓ Registrado en Historial\\n' +
+                      '✓ Sistema actualizado');
+                google.script.host.close();
+              })
+              .withFailureHandler(function(error) {
+                alert('❌ Error: ' + error);
+                document.querySelector('.btn-primary').disabled = false;
+                document.querySelector('.btn-primary').textContent = '✅ Reasignar Tarea';
+              })
+              .procesarReasignacion(tareaID, personaActual, descripcion, area, cantidad, nuevaPersona, tipo);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+function procesarReasignacion(tareaID, personaActual, descripcion, area, cantidad, nuevaPersona, tipo) {
+  try {
+    const tareaInfo = {
+      tareaID: tareaID,
+      persona: personaActual,
+      descripcion: descripcion,
+      area: area,
+      cantidad: cantidad
+    };
+
+    // Buscar la fila de la tarea
+    const tareasSheet = SS.getSheetByName("📋 Tareas");
+    const datos = tareasSheet.getDataRange().getValues();
+    let filaEncontrada = -1;
+
+    for (let i = 1; i < datos.length; i++) {
+      if (datos[i][0] === tareaID) {
+        filaEncontrada = i;
+        break;
+      }
     }
+
+    if (filaEncontrada === -1) {
+      throw new Error(`Tarea ${tareaID} no encontrada`);
+    }
+
+    ejecutarReasignacion(tareaID, tareaInfo, nuevaPersona, tipo, filaEncontrada);
+
+  } catch (e) {
+    console.log(`Error en reasignación: ${e.message}`);
+    throw e;
   }
-
-  const confirmRespuesta = ui.alert(
-    `✅ RESUMEN DE REASIGNACIÓN\n\n` +
-    `Tarea: ${tareaID}\n` +
-    `Tipo: ${tipo}\n` +
-    `De: ${tareaInfo.persona}\n` +
-    `Para: ${nuevaPersona}\n\n` +
-    `¿Confirmar?`,
-    ui.ButtonSet.YES_NO
-  );
-
-  if (confirmRespuesta !== ui.Button.YES) {
-    ui.alert("❌ Cancelado");
-    return;
-  }
-
-  ejecutarReasignacion(tareaID, tareaInfo, nuevaPersona, tipo, filaEncontrada);
-
-  ui.alert(
-    `✅ REASIGNACIÓN EXITOSA\n\n` +
-    `Tarea: ${tareaID}\n` +
-    `Tipo: ${tipo}\n` +
-    `De: ${tareaInfo.persona}\n` +
-    `Para: ${nuevaPersona}\n\n` +
-    `✓ Registrado en Historial\n` +
-    `✓ Notificaciones enviadas`
-  );
 }
 
 function ejecutarReasignacion(tareaID, tareaInfo, nuevaPersona, tipo, fila) {
